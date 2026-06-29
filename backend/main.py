@@ -16,7 +16,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-TEMP_DIR = tempfile.gettempdir()
+TEMP_DIR = os.path.join(tempfile.gettempdir(), "choir_satb")
+os.makedirs(TEMP_DIR, exist_ok=True)
 
 SUPPORTED_MUSIC_FORMATS = ('.mid', '.midi', '.musicxml', '.xml', '.mxl')
 SUPPORTED_IMAGE_FORMATS = ('.png', '.jpg', '.jpeg', '.bmp', '.tiff', '.tif')
@@ -62,7 +63,7 @@ async def analyze_midi(
     the generated individual parts, a combined MIDI, and a MusicXML score.
     """
     # Clean up old generated files to save disk space
-    cleanup_old_files("output", 12)
+    cleanup_old_files(TEMP_DIR, 1)
     
     ext = os.path.splitext(file.filename)[1].lower()
     
