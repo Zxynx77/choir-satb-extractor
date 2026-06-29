@@ -179,45 +179,45 @@ def generate_voicings_for_chord(chord_info, fixed_parts, ranges, scale_key=None,
                     tb_gap = t - b
                     
                     if sa_gap == 0: penalty += 8
-                if at_gap == 0: penalty += 8
-                if tb_gap == 0: penalty += 12
-                
-                if 0 < sa_gap <= 2: penalty += 3
-                if 0 < at_gap <= 2: penalty += 3
-                if 0 < tb_gap <= 2: penalty += 6
-                
-                # === TRADITIONAL STYLE: Heavy Major Triad Bias ===
-                if harmony_style in ['traditional', 'strict']:
-                    q = chord_info.get('quality', 'other')
-                    if q == 'minor':
-                        penalty += 15
-                    elif q == 'diminished':
-                        penalty += 25
-                    elif q == 'other':
-                        penalty += 50
-                
-                # Harmony style spread preference
-                total_span = s - b
-                if harmony_style == 'close':
-                    if 12 <= total_span <= 19:
-                        penalty -= 3
-                    elif total_span > 24:
-                        penalty += 5
-                    elif total_span < 7:
-                        penalty += 5
-                else:  # wide/traditional/advanced
-                    # Reward bass in lower register
-                    bass_mid = (ranges['Bass'][0] + ranges['Bass'][1]) / 2
-                    if b < bass_mid:
-                        penalty -= 2
-                    elif b > bass_mid + 6:
-                        penalty += 3
-                    if 18 <= total_span <= 30:
-                        penalty -= 2
-                    elif total_span < 12:
-                        penalty += 5
-                
-                voicings.append((voicing, chord_info, penalty))
+                    if at_gap == 0: penalty += 8
+                    if tb_gap == 0: penalty += 12
+                    
+                    if 0 < sa_gap <= 2: penalty += 3
+                    if 0 < at_gap <= 2: penalty += 3
+                    if 0 < tb_gap <= 2: penalty += 6
+                    
+                    # === TRADITIONAL STYLE: Heavy Major Triad Bias ===
+                    if harmony_style in ['traditional', 'strict']:
+                        q = chord_info.get('quality', 'other')
+                        if q == 'minor':
+                            penalty += 15
+                        elif q == 'diminished':
+                            penalty += 25
+                        elif q == 'other':
+                            penalty += 50
+                    
+                    # Harmony style spread preference
+                    total_span = s - b
+                    if harmony_style == 'close':
+                        if 12 <= total_span <= 19:
+                            penalty -= 3
+                        elif total_span > 24:
+                            penalty += 5
+                        elif total_span < 7:
+                            penalty += 5
+                    else:  # wide/traditional/advanced
+                        # Reward bass in lower register
+                        bass_mid = (ranges['Bass'][0] + ranges['Bass'][1]) / 2
+                        if b < bass_mid:
+                            penalty -= 2
+                        elif b > bass_mid + 6:
+                            penalty += 3
+                        if 18 <= total_span <= 30:
+                            penalty -= 2
+                        elif total_span < 12:
+                            penalty += 5
+                    
+                    voicings.append((voicing, chord_info, penalty))
     
     voicings.sort(key=lambda x: x[2])
     return voicings[:80]
