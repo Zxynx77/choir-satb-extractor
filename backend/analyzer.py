@@ -433,7 +433,7 @@ def transition_cost(prev_voicing, prev_chord, curr_voicing, curr_chord, scale_ke
     
     return cost, errors
 
-def process_midi(input_path, ranges_str, output_dir, harmony_style='close', tempo_bpm=None, instrument_type='choir', chord_overrides=''):
+def process_midi(input_path, ranges_str, output_dir, harmony_style='close', tempo_bpm=None, instrument_type='choir', chord_overrides='', practice_volume=90):
     """
     Takes a MIDI melody and generates full SATB harmony.
     The input melody becomes the Soprano line.
@@ -695,7 +695,7 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
             # Adjust velocity of all notes
             for n in part_copy.recurse().notes:
                 # music21 defaults to velocity 90 if not set. 
-                n.volume.velocity = 90 if is_target else 25
+                n.volume.velocity = practice_volume if is_target else 25
             
             practice_score.append(part_copy)
             

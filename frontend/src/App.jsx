@@ -50,6 +50,7 @@ function App() {
   // Settings
   const [harmonyStyle, setHarmonyStyle] = useState('strict');
   const [tempoBpm, setTempoBpm] = useState(100);
+  const [practiceVolume, setPracticeVolume] = useState(90);
   const [showSettings, setShowSettings] = useState(false);
   const [instrumentType, setInstrumentType] = useState('choir');
   const [chordOverrides, setChordOverrides] = useState('');
@@ -114,6 +115,7 @@ function App() {
     formData.append('harmony_style', harmonyStyle);
     formData.append('tempo_bpm', tempoBpm.toString());
     formData.append('instrument_type', instrumentType);
+    formData.append('practice_volume', practiceVolume.toString());
     formData.append('chord_overrides', chordOverrides);
 
     try {
@@ -346,23 +348,45 @@ function App() {
 
               {/* Tempo Slider */}
               <div style={{ marginBottom: '1.2rem' }}>
-                <label style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', display: 'block', marginBottom: '0.5rem' }}>
-                  Tempo: <span style={{ color: 'var(--accent-color)', fontWeight: 'bold' }}>{tempoBpm} BPM</span>
+                <label style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                  <span>Tempo: <strong style={{ color: 'var(--primary)' }}>{tempoBpm} BPM</strong></span>
                 </label>
                 <input 
                   type="range" 
                   min="40" 
                   max="200" 
-                  value={tempoBpm} 
+                  value={tempoBpm}
                   onChange={(e) => setTempoBpm(parseInt(e.target.value))}
-                  className="tempo-slider"
-                  style={{ width: '100%' }}
+                  style={{ width: '100%', accentColor: 'var(--primary)' }}
                 />
-                <div className="flex" style={{ justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: '0.2rem' }}>
                   <span>40 (Slow)</span>
                   <span>120 (Medium)</span>
                   <span>200 (Fast)</span>
                 </div>
+              </div>
+
+              {/* Practice Volume Slider */}
+              <div style={{ marginBottom: '1.2rem' }}>
+                <label style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                  <span>Practice Track Solo Volume: <strong style={{ color: 'var(--primary)' }}>{practiceVolume}</strong></span>
+                </label>
+                <input 
+                  type="range" 
+                  min="50" 
+                  max="127" 
+                  value={practiceVolume}
+                  onChange={(e) => setPracticeVolume(parseInt(e.target.value))}
+                  style={{ width: '100%', accentColor: 'var(--primary)' }}
+                />
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: '0.2rem' }}>
+                  <span>50 (Quiet)</span>
+                  <span>90 (Balanced)</span>
+                  <span>127 (Loud)</span>
+                </div>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: '0.5rem', lineHeight: '1.4' }}>
+                  Adjusts how loud the solo part cuts through in the individual practice tracks.
+                </p>
               </div>
 
               {/* Chord Overrides */}

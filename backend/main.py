@@ -53,9 +53,10 @@ async def analyze_midi(
     bass_min: str = Form("F2"),
     bass_max: str = Form("D4"),
     harmony_style: str = Form("close"),
-    tempo_bpm: int = Form(0),
-    instrument_type: str = Form("choir"),
-    chord_overrides: str = Form(""),
+    tempo_bpm: int = Form(None),
+    instrument_type: str = Form('choir'),
+    chord_overrides: str = Form(''),
+    practice_volume: int = Form(90)
 ):
     """
     Receives a music file (MIDI, MusicXML, image of sheet music, or PDF),
@@ -95,7 +96,7 @@ async def analyze_midi(
         
         # Process through the harmonizer
         user_tempo = tempo_bpm if tempo_bpm > 0 else None
-        result = process_midi(converted_path, ranges, TEMP_DIR, harmony_style, user_tempo, instrument_type, chord_overrides)
+        result = process_midi(converted_path, ranges, TEMP_DIR, harmony_style, user_tempo, instrument_type, chord_overrides, practice_volume)
         
         return JSONResponse(content={
             "message": "Analysis successful",
