@@ -392,7 +392,7 @@ function App() {
                 </p>
               </div>
               
-              {/* Keep Alto Checkbox */}
+              {/* Keep Parts Checkbox */}
               <div style={{ marginBottom: '1.2rem' }}>
                 <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
                   <input 
@@ -401,10 +401,10 @@ function App() {
                     onChange={(e) => setKeepAlto(e.target.checked)}
                     style={{ marginRight: '8px', accentColor: 'var(--primary)', width: '16px', height: '16px' }}
                   />
-                  <span>Keep Original Alto (if present)</span>
+                  <span>Keep Original Parts (if present)</span>
                 </label>
                 <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: '0.5rem', lineHeight: '1.4', paddingLeft: '24px' }}>
-                  If your file already has Soprano and Alto, checking this prevents the AI from overwriting your Alto.
+                  If your file already has Alto, Tenor, or Bass parts, checking this preserves them and only generates the missing parts.
                 </p>
               </div>
             </div>

@@ -433,11 +433,12 @@ def transition_cost(prev_voicing, prev_chord, curr_voicing, curr_chord, scale_ke
     
     return cost, errors
 
-def process_midi(input_path, ranges_str, output_dir, harmony_style='close', tempo_bpm=None, instrument_type='choir', chord_overrides='', keep_alto=False):
+def process_midi(input_path, ranges_str, output_dir, harmony_style='close', tempo_bpm=None, instrument_type='choir', chord_overrides='', keep_parts=False):
     """
     Takes a MIDI melody and generates full SATB harmony.
     The input melody becomes the Soprano line.
     Alto, Tenor, and Bass are generated automatically.
+    If keep_parts is True, existing Alto/Tenor/Bass from the input are preserved.
     """
     print(f"Harmonizing melody: {input_path}")
     score = converter.parse(input_path)
@@ -458,15 +459,34 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
     melody_events = []
     for element in score.chordify().flatten().notesAndRests:
         if element.isRest:
-            melody_events.append(('rest', element.duration, None, None))
+            melody_events.append(('rest', element.duration, None, {}))
         elif element.isNote:
-            melody_events.append(('note', element.duration, element.pitch, None))
+            melody_events.append(('note', element.duration, element.pitch, {}))
         elif element.isChord:
             # Sort pitches highest to lowest
             pitches = sorted(element.pitches, key=lambda p: p.ps, reverse=True)
             sop = pitches[0]
-            alto = pitches[1] if (len(pitches) > 1 and keep_alto) else None
-            melody_events.append(('note', element.duration, sop, alto))
+            input_parts = {}
+            if keep_parts and len(pitches) > 1:
+                # Classify remaining pitches into Alto/Tenor/Bass by checking which range they fall into
+                for extra_pitch in pitches[1:]:
+                    ps = extra_pitch.ps
+                    best_part = None
+                    best_dist = float('inf')
+                    for part_name in ['Alto', 'Tenor', 'Bass']:
+                        if part_name in input_parts:
+                            continue  # Already assigned
+                        lo, hi = ranges[part_name]
+                        if lo <= ps <= hi:
+                            # Distance to center of range
+                            center = (lo + hi) / 2
+                            dist = abs(ps - center)
+                            if dist < best_dist:
+                                best_dist = dist
+                                best_part = part_name
+                    if best_part:
+                        input_parts[best_part] = extra_pitch
+            melody_events.append(('note', element.duration, sop, input_parts))
     
     if not melody_events:
         raise Exception("No notes found in the MIDI file.")
@@ -480,7 +500,7 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
     dp = []
     state_data = []  # Parallel list: state_data[i][state_key] = (voicing, chord_info)
     
-    for i, (etype, dur, mel_pitch, input_alto_pitch) in enumerate(melody_events):
+    for i, (etype, dur, mel_pitch, input_parts) in enumerate(melody_events):
         if etype == 'rest':
             state_key = 'rest'
             if i == 0 or not dp:
@@ -523,9 +543,13 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
         for ch in candidate_chords:
             voicings = generate_voicings_for_chord(ch, mel_pitch.ps, ranges, detected_key, harmony_style)
             
-            # If user wants to keep original Alto and it exists, filter candidate voicings
-            if input_alto_pitch is not None:
-                voicings = [v for v in voicings if v[1] == input_alto_pitch.ps]
+            # If user wants to keep original parts, filter candidate voicings
+            if input_parts.get('Alto'):
+                voicings = [v for v in voicings if v[1] == input_parts['Alto'].ps]
+            if input_parts.get('Tenor'):
+                voicings = [v for v in voicings if v[2] == input_parts['Tenor'].ps]
+            if input_parts.get('Bass'):
+                voicings = [v for v in voicings if v[3] == input_parts['Bass'].ps]
                 
             all_voicings.extend(voicings)
         
@@ -533,23 +557,29 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
             # Emergency fallback — still enforce spacing rules
             s = int(mel_pitch.ps)
             
-            if input_alto_pitch is not None:
-                a = int(input_alto_pitch.ps)
+            if input_parts.get('Alto'):
+                a = int(input_parts['Alto'].ps)
             else:
                 # Alto: within 1 octave below soprano, within alto range
                 a = max(s - 7, int(ranges['Alto'][0]))   # Perfect 5th below soprano
                 a = min(a, int(ranges['Alto'][1]))
                 if s - a > 12: a = s - 12  # Enforce S-A <= octave
             
-            # Tenor: within 1 octave below alto, within tenor range
-            t = max(a - 7, int(ranges['Tenor'][0]))
-            t = min(t, int(ranges['Tenor'][1]))
-            if a - t > 12: t = a - 12  # Enforce A-T ≤ octave
+            if input_parts.get('Tenor'):
+                t = int(input_parts['Tenor'].ps)
+            else:
+                # Tenor: within 1 octave below alto, within tenor range
+                t = max(a - 7, int(ranges['Tenor'][0]))
+                t = min(t, int(ranges['Tenor'][1]))
+                if a - t > 12: t = a - 12  # Enforce A-T <= octave
             
-            # Bass: within P12 below tenor, within bass range
-            b = max(t - 12, int(ranges['Bass'][0]))
-            b = min(b, int(ranges['Bass'][1]))
-            if t - b > 19: b = t - 19  # Enforce T-B ≤ P12
+            if input_parts.get('Bass'):
+                b = int(input_parts['Bass'].ps)
+            else:
+                # Bass: within P12 below tenor, within bass range
+                b = max(t - 12, int(ranges['Bass'][0]))
+                b = min(b, int(ranges['Bass'][1]))
+                if t - b > 19: b = t - 19  # Enforce T-B <= P12
             
             fallback_chord = {'root_pc': mel_pitch.pitchClass, 'quality': 'major', 'pcs': {mel_pitch.pitchClass}, 'degree': 0}
             all_voicings = [((s, a, t, b), fallback_chord, 50)]
@@ -661,7 +691,7 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
                     p.insert(0, copy.deepcopy(el))
                 break
     
-    for idx, (etype, dur, mel_pitch, input_alto_pitch) in enumerate(melody_events):
+    for idx, (etype, dur, mel_pitch, input_parts) in enumerate(melody_events):
         sk = path_keys[idx]
         
         if sk is None or sk == 'rest' or etype == 'rest':
