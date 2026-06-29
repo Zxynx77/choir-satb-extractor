@@ -48,7 +48,7 @@ function App() {
   const audioRef = useRef(null);
 
   // Settings
-  const [harmonyStyle, setHarmonyStyle] = useState('close');
+  const [harmonyStyle, setHarmonyStyle] = useState('strict');
   const [tempoBpm, setTempoBpm] = useState(100);
   const [showSettings, setShowSettings] = useState(false);
   const [instrumentType, setInstrumentType] = useState('choir');
