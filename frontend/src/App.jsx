@@ -400,8 +400,8 @@ function App() {
               
               {/* Keep Parts Checkboxes */}
               <div style={{ marginBottom: '1.2rem' }}>
-                <label style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', display: 'block', marginBottom: '0.5rem' }}>
-                  Keep Original Parts (if present in file)
+                <label style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', display: 'block', marginBottom: '0.8rem' }}>
+                  Keep Original Parts (Optional)
                 </label>
                 <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                   {['Soprano', 'Alto', 'Tenor', 'Bass'].map(part => (
@@ -416,7 +416,7 @@ function App() {
                     </label>
                   ))}
                 </div>
-                <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: '0.5rem', lineHeight: '1.4' }}>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: '0.6rem' }}>
                   Select the parts included in your MIDI file. The AI will preserve them and only generate the missing parts. Leave all blank to generate everything from scratch.
                 </p>
               </div>
