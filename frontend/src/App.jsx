@@ -50,6 +50,7 @@ function App() {
   // Settings
   const [harmonyStyle, setHarmonyStyle] = useState('strict');
   const [tempoBpm, setTempoBpm] = useState(100);
+  const [keepParts, setKeepParts] = useState([]);
   const [showSettings, setShowSettings] = useState(false);
   const [instrumentType, setInstrumentType] = useState('choir');
   const [chordOverrides, setChordOverrides] = useState('');
@@ -96,6 +97,12 @@ function App() {
     }
   };
 
+  const toggleKeepPart = (part) => {
+    setKeepParts(prev => 
+      prev.includes(part) ? prev.filter(p => p !== part) : [...prev, part]
+    );
+  };
+
   const handleAnalyze = async () => {
     if (!file) return;
     
@@ -115,6 +122,7 @@ function App() {
     formData.append('tempo_bpm', tempoBpm.toString());
     formData.append('instrument_type', instrumentType);
     formData.append('chord_overrides', chordOverrides);
+    formData.append('keep_parts', keepParts.join(','));
 
     try {
       const response = await fetch(`${API_URL}/analyze`, {
@@ -387,6 +395,29 @@ function App() {
                 />
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: '0.4rem' }}>
                   Leave blank for automatic AI harmonization. If provided, the AI will strictly follow these chords.
+                </p>
+              </div>
+              
+              {/* Keep Parts Checkboxes */}
+              <div style={{ marginBottom: '1.2rem' }}>
+                <label style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', display: 'block', marginBottom: '0.5rem' }}>
+                  Keep Original Parts (if present in file)
+                </label>
+                <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                  {['Soprano', 'Alto', 'Tenor', 'Bass'].map(part => (
+                    <label key={part} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', color: 'var(--text-primary)', fontSize: '0.85rem' }}>
+                      <input 
+                        type="checkbox" 
+                        checked={keepParts.includes(part)}
+                        onChange={() => toggleKeepPart(part)}
+                        style={{ marginRight: '6px', accentColor: 'var(--primary)', width: '16px', height: '16px' }}
+                      />
+                      {part}
+                    </label>
+                  ))}
+                </div>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: '0.5rem', lineHeight: '1.4' }}>
+                  Select the parts included in your MIDI file. The AI will preserve them and only generate the missing parts. Leave all blank to generate everything from scratch.
                 </p>
               </div>
             </div>

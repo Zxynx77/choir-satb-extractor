@@ -84,10 +84,10 @@ def get_leading_tone_pc(scale_key):
     else:
         return (tonic_pc + 11) % 12  # 7th degree of major scale
 
-def generate_voicings_for_chord(chord_info, melody_midi, ranges, scale_key=None, harmony_style='close'):
+def generate_voicings_for_chord(chord_info, fixed_parts, ranges, scale_key=None, harmony_style='close'):
     """
-    Generate all valid SATB voicings where Soprano = melody_midi exactly,
-    and Alto, Tenor, Bass are drawn from the chord's pitch classes within their ranges.
+    Generate all valid SATB voicings where the provided fixed_parts are locked,
+    and missing parts are drawn from the chord's pitch classes within their ranges.
     Enforces PartWriter rules for doubling and spacing.
     """
     pcs = chord_info['pcs']
@@ -104,80 +104,81 @@ def generate_voicings_for_chord(chord_info, melody_midi, ranges, scale_key=None,
             third_interval = pc
             break
     
-    s = int(melody_midi)  # Soprano is FIXED to the melody note
-    
-    # Generate candidates for Alto, Tenor, Bass from chord pitch classes
-    a_cands = [p for p in range(int(ranges['Alto'][0]), int(ranges['Alto'][1]) + 1) if p % 12 in pcs]
-    t_cands = [p for p in range(int(ranges['Tenor'][0]), int(ranges['Tenor'][1]) + 1) if p % 12 in pcs]
-    b_cands = [p for p in range(int(ranges['Bass'][0]), int(ranges['Bass'][1]) + 1) if p % 12 in pcs]
+    # Generate candidates for all voices
+    # If a voice is fixed, its only candidate is the fixed pitch
+    s_cands = [fixed_parts['Soprano'].ps] if 'Soprano' in fixed_parts else [p for p in range(int(ranges['Soprano'][0]), int(ranges['Soprano'][1]) + 1) if p % 12 in pcs]
+    a_cands = [fixed_parts['Alto'].ps] if 'Alto' in fixed_parts else [p for p in range(int(ranges['Alto'][0]), int(ranges['Alto'][1]) + 1) if p % 12 in pcs]
+    t_cands = [fixed_parts['Tenor'].ps] if 'Tenor' in fixed_parts else [p for p in range(int(ranges['Tenor'][0]), int(ranges['Tenor'][1]) + 1) if p % 12 in pcs]
+    b_cands = [fixed_parts['Bass'].ps] if 'Bass' in fixed_parts else [p for p in range(int(ranges['Bass'][0]), int(ranges['Bass'][1]) + 1) if p % 12 in pcs]
     
     # Tag bass candidates: root gets bonus (handled via penalty later)
     b_has_root = any(p % 12 == root_pc for p in b_cands)
     
     voicings = []
     
-    for a in a_cands:
-        if s < a: continue  # No voice crossing
-        if s - a > 12: continue  # Spacing: S-A within octave
-        
-        for t in t_cands:
-            if a < t: continue  # No voice crossing
-            if a - t > 12: continue  # Spacing: A-T within octave
+    for s in s_cands:
+        for a in a_cands:
+            if s < a: continue  # No voice crossing
+            if s - a > 12: continue  # Spacing: S-A within octave
             
-            for b in b_cands:
-                if t < b: continue  # No voice crossing
-                if t - b > 19: continue  # Spacing: T-B within P12
+            for t in t_cands:
+                if a < t: continue  # No voice crossing
+                if a - t > 12: continue  # Spacing: A-T within octave
                 
-                voicing = (s, a, t, b)
-                voicing_pcs = set(p % 12 for p in voicing)
-                pc_list = [p % 12 for p in voicing]
-                
-                # Must cover all 3 pitch classes of the triad
-                if not pcs.issubset(voicing_pcs):
-                    fifth_pc = None
-                    for pc in pcs:
-                        if pc != root_pc and (pc - root_pc) % 12 not in [3, 4]:
-                            fifth_pc = pc
-                    missing = pcs - voicing_pcs
-                    if missing and missing != {fifth_pc}:
-                        continue
-                
-                penalty = 0
-                doubled = [pc for pc in set(pc_list) if pc_list.count(pc) > 1]
-                
-                # === PARTWRITER RULE: Leading tone never doubled ===
-                if leading_tone_pc is not None:
-                    lt_count = pc_list.count(leading_tone_pc)
-                    if lt_count > 1:
-                        penalty += 100  # Strictly forbidden
-                
-                # === PARTWRITER RULE: Root doubling preferred ===
-                for d in doubled:
-                    if d == root_pc:
-                        if harmony_style in ['traditional', 'strict']: penalty -= 2 # Reward root doubling
-                    elif d == third_interval:
-                        penalty += 20 if harmony_style in ['traditional', 'strict'] else 5  # Doubling 3rd is strictly forbidden in traditional
-                    else:
-                        penalty += 5 if harmony_style in ['traditional', 'strict'] else 3  # Doubling 5th is less bad
-                
-                # === PARTWRITER RULE: 2nd inversion — double the bass (5th) ===
-                if chord_info.get('quality') != 'diminished':
-                    # Check if bass has the 5th of the chord
-                    fifth_pc_check = None
-                    for pc in pcs:
-                        if (pc - root_pc) % 12 == 7:
-                            fifth_pc_check = pc
-                    if fifth_pc_check is not None and b % 12 == fifth_pc_check:
-                        # This is 2nd inversion — reward doubling the 5th (bass note)
-                        if pc_list.count(fifth_pc_check) >= 2:
-                            penalty -= 3  # Good: double bass in 6/4
-                
-                # === Voice separation penalties ===
-                sa_gap = s - a
-                at_gap = a - t
-                tb_gap = t - b
-                
-                if sa_gap == 0: penalty += 8
+                for b in b_cands:
+                    if t < b: continue  # No voice crossing
+                    if t - b > 19: continue  # Spacing: T-B within P12
+                    
+                    voicing = (s, a, t, b)
+                    voicing_pcs = set(p % 12 for p in voicing)
+                    pc_list = [p % 12 for p in voicing]
+                    
+                    # Must cover all 3 pitch classes of the triad
+                    if not pcs.issubset(voicing_pcs):
+                        fifth_pc = None
+                        for pc in pcs:
+                            if pc != root_pc and (pc - root_pc) % 12 not in [3, 4]:
+                                fifth_pc = pc
+                        missing = pcs - voicing_pcs
+                        if missing and missing != {fifth_pc}:
+                            continue
+                    
+                    penalty = 0
+                    doubled = [pc for pc in set(pc_list) if pc_list.count(pc) > 1]
+                    
+                    # === PARTWRITER RULE: Leading tone never doubled ===
+                    if leading_tone_pc is not None:
+                        lt_count = pc_list.count(leading_tone_pc)
+                        if lt_count > 1:
+                            penalty += 100  # Strictly forbidden
+                    
+                    # === PARTWRITER RULE: Root doubling preferred ===
+                    for d in doubled:
+                        if d == root_pc:
+                            if harmony_style in ['traditional', 'strict']: penalty -= 2 # Reward root doubling
+                        elif d == third_interval:
+                            penalty += 20 if harmony_style in ['traditional', 'strict'] else 5  # Doubling 3rd is strictly forbidden in traditional
+                        else:
+                            penalty += 5 if harmony_style in ['traditional', 'strict'] else 3  # Doubling 5th is less bad
+                    
+                    # === PARTWRITER RULE: 2nd inversion — double the bass (5th) ===
+                    if chord_info.get('quality') != 'diminished':
+                        # Check if bass has the 5th of the chord
+                        fifth_pc_check = None
+                        for pc in pcs:
+                            if (pc - root_pc) % 12 == 7:
+                                fifth_pc_check = pc
+                        if fifth_pc_check is not None and b % 12 == fifth_pc_check:
+                            # This is 2nd inversion — reward doubling the 5th (bass note)
+                            if pc_list.count(fifth_pc_check) >= 2:
+                                penalty -= 3  # Good: double bass in 6/4
+                    
+                    # === Voice separation penalties ===
+                    sa_gap = s - a
+                    at_gap = a - t
+                    tb_gap = t - b
+                    
+                    if sa_gap == 0: penalty += 8
                 if at_gap == 0: penalty += 8
                 if tb_gap == 0: penalty += 12
                 
@@ -433,11 +434,12 @@ def transition_cost(prev_voicing, prev_chord, curr_voicing, curr_chord, scale_ke
     
     return cost, errors
 
-def process_midi(input_path, ranges_str, output_dir, harmony_style='close', tempo_bpm=None, instrument_type='choir', chord_overrides=''):
+def process_midi(input_path, ranges_str, output_dir, harmony_style='close', tempo_bpm=None, instrument_type='choir', chord_overrides='', keep_parts_list=None):
     """
-    Takes a MIDI melody and generates full SATB harmony.
-    The input melody becomes the Soprano line.
-    Alto, Tenor, and Bass are generated automatically.
+    Takes a MIDI file and generates full SATB harmony.
+    If keep_parts_list is provided, it maps the highest to lowest pitches in the file
+    to those specific voice parts and generates the remaining parts around them.
+    If empty, the highest note is forced to be Soprano.
     """
     print(f"Harmonizing melody: {input_path}")
     score = converter.parse(input_path)
@@ -454,16 +456,28 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
         'Bass': (pitch.Pitch(ranges_str['bass_min']).ps, pitch.Pitch(ranges_str['bass_max']).ps),
     }
     
-    # Extract melody notes (chordify combines all simultaneous parts, then we take the highest note)
+    if keep_parts_list is None:
+        keep_parts_list = []
+        
     melody_events = []
     for element in score.chordify().flatten().notesAndRests:
         if element.isRest:
-            melody_events.append(('rest', element.duration, None))
+            melody_events.append(('rest', element.duration, {}))
         elif element.isNote:
-            melody_events.append(('note', element.duration, element.pitch))
+            if keep_parts_list:
+                melody_events.append(('note', element.duration, {keep_parts_list[0]: element.pitch}))
+            else:
+                melody_events.append(('note', element.duration, {'Soprano': element.pitch}))
         elif element.isChord:
-            # If input has chords, take the highest note as melody
-            melody_events.append(('note', element.duration, max(element.pitches, key=lambda p: p.ps)))
+            pitches = sorted(element.pitches, key=lambda p: p.ps, reverse=True)
+            fixed_parts = {}
+            if keep_parts_list:
+                for idx, part_name in enumerate(keep_parts_list):
+                    if idx < len(pitches):
+                        fixed_parts[part_name] = pitches[idx]
+            else:
+                fixed_parts['Soprano'] = pitches[0]
+            melody_events.append(('note', element.duration, fixed_parts))
     
     if not melody_events:
         raise Exception("No notes found in the MIDI file.")
@@ -477,7 +491,7 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
     dp = []
     state_data = []  # Parallel list: state_data[i][state_key] = (voicing, chord_info)
     
-    for i, (etype, dur, mel_pitch) in enumerate(melody_events):
+    for i, (etype, dur, fixed_parts) in enumerate(melody_events):
         if etype == 'rest':
             state_key = 'rest'
             if i == 0 or not dp:
@@ -504,7 +518,10 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
                 except Exception as e:
                     print(f"Failed to parse chord override '{o}': {e}")
 
-        # Generate candidate chords for this melody note
+        # Get a representative pitch to use for chord generation (topmost pitch)
+        top_pitch = list(fixed_parts.values())[0] if fixed_parts else note.Note("C4").pitch
+        
+        # Generate candidate chords for this note
         if forced_chords:
             idx = int( (i / len(melody_events)) * len(forced_chords) )
             fc = forced_chords[idx]
@@ -513,33 +530,40 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
             pcs = set(p.pitchClass for p in fc.pitches)
             candidate_chords = [{'root_pc': root_pc, 'quality': quality, 'pcs': pcs, 'degree': 0}]
         else:
-            candidate_chords = generate_candidate_chords(mel_pitch, detected_key)
+            candidate_chords = generate_candidate_chords(top_pitch, detected_key)
         
         # Generate all valid voicings across all candidate chords
         all_voicings = []
         for ch in candidate_chords:
-            voicings = generate_voicings_for_chord(ch, mel_pitch.ps, ranges, detected_key, harmony_style)
+            voicings = generate_voicings_for_chord(ch, fixed_parts, ranges, detected_key, harmony_style)
             all_voicings.extend(voicings)
         
         if not all_voicings:
             # Emergency fallback — still enforce spacing rules
-            s = int(mel_pitch.ps)
-            # Alto: within 1 octave below soprano, within alto range
-            a = max(s - 7, int(ranges['Alto'][0]))   # Perfect 5th below soprano
-            a = min(a, int(ranges['Alto'][1]))
-            if s - a > 12: a = s - 12  # Enforce S-A ≤ octave
+            s = int(fixed_parts['Soprano'].ps) if 'Soprano' in fixed_parts else int(top_pitch.ps)
             
-            # Tenor: within 1 octave below alto, within tenor range
-            t = max(a - 7, int(ranges['Tenor'][0]))
-            t = min(t, int(ranges['Tenor'][1]))
-            if a - t > 12: t = a - 12  # Enforce A-T ≤ octave
+            if 'Alto' in fixed_parts:
+                a = int(fixed_parts['Alto'].ps)
+            else:
+                a = max(s - 7, int(ranges['Alto'][0]))
+                a = min(a, int(ranges['Alto'][1]))
+                if s - a > 12: a = s - 12
             
-            # Bass: within P12 below tenor, within bass range
-            b = max(t - 12, int(ranges['Bass'][0]))
-            b = min(b, int(ranges['Bass'][1]))
-            if t - b > 19: b = t - 19  # Enforce T-B ≤ P12
+            if 'Tenor' in fixed_parts:
+                t = int(fixed_parts['Tenor'].ps)
+            else:
+                t = max(a - 7, int(ranges['Tenor'][0]))
+                t = min(t, int(ranges['Tenor'][1]))
+                if a - t > 12: t = a - 12
             
-            fallback_chord = {'root_pc': mel_pitch.pitchClass, 'quality': 'major', 'pcs': {mel_pitch.pitchClass}, 'degree': 0}
+            if 'Bass' in fixed_parts:
+                b = int(fixed_parts['Bass'].ps)
+            else:
+                b = max(t - 12, int(ranges['Bass'][0]))
+                b = min(b, int(ranges['Bass'][1]))
+                if t - b > 19: b = t - 19
+            
+            fallback_chord = {'root_pc': top_pitch.pitchClass, 'quality': 'major', 'pcs': {top_pitch.pitchClass}, 'degree': 0}
             all_voicings = [((s, a, t, b), fallback_chord, 50)]
         
         current_states = {}
@@ -649,7 +673,7 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
                     p.insert(0, copy.deepcopy(el))
                 break
     
-    for idx, (etype, dur, mel_pitch) in enumerate(melody_events):
+    for idx, (etype, dur, fixed_parts) in enumerate(melody_events):
         sk = path_keys[idx]
         
         if sk is None or sk == 'rest' or etype == 'rest':
