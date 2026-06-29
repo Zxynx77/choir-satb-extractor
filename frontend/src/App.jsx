@@ -431,7 +431,7 @@ function App() {
                 </span>
               )}
               <span className="badge">
-                🎵 {harmonyStyle === 'close' ? 'Close Harmony' : 'Wide Harmony'}
+                🎵 {harmonyStyle === 'close' ? 'Close Harmony' : harmonyStyle === 'wide' ? 'Wide Harmony' : harmonyStyle === 'traditional' ? 'Traditional Hymns' : 'Strict Block Chords'}
               </span>
               <span className="badge">
                 🎛️ {tempoBpm} BPM
