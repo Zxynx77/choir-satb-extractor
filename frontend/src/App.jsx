@@ -50,6 +50,7 @@ function App() {
   // Settings
   const [harmonyStyle, setHarmonyStyle] = useState('strict');
   const [tempoBpm, setTempoBpm] = useState(100);
+  const [keepAlto, setKeepAlto] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [instrumentType, setInstrumentType] = useState('choir');
   const [chordOverrides, setChordOverrides] = useState('');
@@ -115,6 +116,7 @@ function App() {
     formData.append('tempo_bpm', tempoBpm.toString());
     formData.append('instrument_type', instrumentType);
     formData.append('chord_overrides', chordOverrides);
+    formData.append('keep_alto', keepAlto.toString());
 
     try {
       const response = await fetch(`${API_URL}/analyze`, {
@@ -387,6 +389,22 @@ function App() {
                 />
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: '0.4rem' }}>
                   Leave blank for automatic AI harmonization. If provided, the AI will strictly follow these chords.
+                </p>
+              </div>
+              
+              {/* Keep Alto Checkbox */}
+              <div style={{ marginBottom: '1.2rem' }}>
+                <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                  <input 
+                    type="checkbox" 
+                    checked={keepAlto}
+                    onChange={(e) => setKeepAlto(e.target.checked)}
+                    style={{ marginRight: '8px', accentColor: 'var(--primary)', width: '16px', height: '16px' }}
+                  />
+                  <span>Keep Original Alto (if present)</span>
+                </label>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: '0.5rem', lineHeight: '1.4', paddingLeft: '24px' }}>
+                  If your file already has Soprano and Alto, checking this prevents the AI from overwriting your Alto.
                 </p>
               </div>
             </div>
