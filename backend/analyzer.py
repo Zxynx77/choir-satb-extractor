@@ -454,9 +454,9 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
         'Bass': (pitch.Pitch(ranges_str['bass_min']).ps, pitch.Pitch(ranges_str['bass_max']).ps),
     }
     
-    # Extract melody notes (flatten everything to a single line)
+    # Extract melody notes (chordify combines all simultaneous parts, then we take the highest note)
     melody_events = []
-    for element in score.flatten().notesAndRests:
+    for element in score.chordify().flatten().notesAndRests:
         if element.isRest:
             melody_events.append(('rest', element.duration, None))
         elif element.isNote:
