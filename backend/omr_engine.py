@@ -18,7 +18,7 @@ from music21 import stream, note, meter, tempo, key, clef, pitch
 
 
 # Staff line and note detection constants
-STAFF_LINE_THRESHOLD = 0.6  # % of image width a horizontal line must span
+STAFF_LINE_THRESHOLD = 0.3  # Reduced to allow for slightly curved/rotated cell phone photos
 NOTE_HEAD_MIN_AREA = 50
 NOTE_HEAD_MAX_AREA = 800
 NOTE_HEAD_ASPECT_RATIO_MAX = 2.5  # Width/Height ratio
@@ -52,10 +52,13 @@ def preprocess_image(img_path):
     # Convert to grayscale
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     
-    # Adaptive threshold to handle varying lighting
+    # Apply a slight blur to remove phone camera grain
+    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+    
+    # Adaptive threshold to handle varying lighting (large block size for big photos)
     binary = cv2.adaptiveThreshold(
-        gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-        cv2.THRESH_BINARY_INV, 15, 10
+        blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+        cv2.THRESH_BINARY_INV, 81, 15
     )
     
     return img, gray, binary
@@ -66,8 +69,8 @@ def detect_staff_lines(binary, img_width):
     Detect horizontal staff lines using morphological operations.
     Returns list of staff groups, each containing 5 y-coordinates.
     """
-    # Use a wide horizontal kernel to detect staff lines
-    kernel_width = img_width // 3
+    # Use a moderate horizontal kernel to detect staff lines (more robust to slight rotation)
+    kernel_width = max(30, img_width // 15)
     horizontal_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (kernel_width, 1))
     detected_lines = cv2.morphologyEx(binary, cv2.MORPH_OPEN, horizontal_kernel, iterations=1)
     
