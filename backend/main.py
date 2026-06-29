@@ -96,8 +96,8 @@ async def analyze_midi(
         
         # Process through the harmonizer
         user_tempo = tempo_bpm if tempo_bpm > 0 else None
-        keep_parts_bool = keep_alto.lower() == 'true'
-        result = process_midi(converted_path, ranges, TEMP_DIR, harmony_style, user_tempo, instrument_type, chord_overrides, keep_parts_bool)
+        keep_alto_bool = keep_alto.lower() == 'true'
+        result = process_midi(converted_path, ranges, TEMP_DIR, harmony_style, user_tempo, instrument_type, chord_overrides, keep_alto_bool)
         
         return JSONResponse(content={
             "message": "Analysis successful",
