@@ -545,11 +545,11 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
             
             # If user wants to keep original parts, filter candidate voicings
             if input_parts.get('Alto'):
-                voicings = [v for v in voicings if v[1] == input_parts['Alto'].ps]
+                voicings = [v for v in voicings if v[0][1] == input_parts['Alto'].ps]
             if input_parts.get('Tenor'):
-                voicings = [v for v in voicings if v[2] == input_parts['Tenor'].ps]
+                voicings = [v for v in voicings if v[0][2] == input_parts['Tenor'].ps]
             if input_parts.get('Bass'):
-                voicings = [v for v in voicings if v[3] == input_parts['Bass'].ps]
+                voicings = [v for v in voicings if v[0][3] == input_parts['Bass'].ps]
                 
             all_voicings.extend(voicings)
         
