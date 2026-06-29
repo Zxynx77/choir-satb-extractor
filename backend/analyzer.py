@@ -433,7 +433,7 @@ def transition_cost(prev_voicing, prev_chord, curr_voicing, curr_chord, scale_ke
     
     return cost, errors
 
-def process_midi(input_path, ranges_str, output_dir, harmony_style='close', tempo_bpm=None, instrument_type='choir', chord_overrides='', keep_alto=False):
+def process_midi(input_path, ranges_str, output_dir, harmony_style='close', tempo_bpm=None, instrument_type='choir', chord_overrides=''):
     """
     Takes a MIDI melody and generates full SATB harmony.
     The input melody becomes the Soprano line.
@@ -458,15 +458,12 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
     melody_events = []
     for element in score.chordify().flatten().notesAndRests:
         if element.isRest:
-            melody_events.append(('rest', element.duration, None, None))
+            melody_events.append(('rest', element.duration, None))
         elif element.isNote:
-            melody_events.append(('note', element.duration, element.pitch, None))
+            melody_events.append(('note', element.duration, element.pitch))
         elif element.isChord:
-            # Sort pitches highest to lowest
-            pitches = sorted(element.pitches, key=lambda p: p.ps, reverse=True)
-            sop = pitches[0]
-            alto = pitches[1] if (len(pitches) > 1 and keep_alto) else None
-            melody_events.append(('note', element.duration, sop, alto))
+            # If input has chords, take the highest note as melody
+            melody_events.append(('note', element.duration, max(element.pitches, key=lambda p: p.ps)))
     
     if not melody_events:
         raise Exception("No notes found in the MIDI file.")
@@ -480,7 +477,7 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
     dp = []
     state_data = []  # Parallel list: state_data[i][state_key] = (voicing, chord_info)
     
-    for i, (etype, dur, mel_pitch, input_alto_pitch) in enumerate(melody_events):
+    for i, (etype, dur, mel_pitch) in enumerate(melody_events):
         if etype == 'rest':
             state_key = 'rest'
             if i == 0 or not dp:
@@ -522,24 +519,15 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
         all_voicings = []
         for ch in candidate_chords:
             voicings = generate_voicings_for_chord(ch, mel_pitch.ps, ranges, detected_key, harmony_style)
-            
-            # If user wants to keep original Alto and it exists, filter candidate voicings
-            if input_alto_pitch is not None:
-                voicings = [v for v in voicings if v[1] == input_alto_pitch.ps]
-                
             all_voicings.extend(voicings)
         
         if not all_voicings:
             # Emergency fallback — still enforce spacing rules
             s = int(mel_pitch.ps)
-            
-            if input_alto_pitch is not None:
-                a = int(input_alto_pitch.ps)
-            else:
-                # Alto: within 1 octave below soprano, within alto range
-                a = max(s - 7, int(ranges['Alto'][0]))   # Perfect 5th below soprano
-                a = min(a, int(ranges['Alto'][1]))
-                if s - a > 12: a = s - 12  # Enforce S-A <= octave
+            # Alto: within 1 octave below soprano, within alto range
+            a = max(s - 7, int(ranges['Alto'][0]))   # Perfect 5th below soprano
+            a = min(a, int(ranges['Alto'][1]))
+            if s - a > 12: a = s - 12  # Enforce S-A ≤ octave
             
             # Tenor: within 1 octave below alto, within tenor range
             t = max(a - 7, int(ranges['Tenor'][0]))
@@ -661,7 +649,7 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
                     p.insert(0, copy.deepcopy(el))
                 break
     
-    for idx, (etype, dur, mel_pitch, input_alto_pitch) in enumerate(melody_events):
+    for idx, (etype, dur, mel_pitch) in enumerate(melody_events):
         sk = path_keys[idx]
         
         if sk is None or sk == 'rest' or etype == 'rest':
