@@ -403,21 +403,17 @@ function App() {
                 <label style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', display: 'block', marginBottom: '0.8rem' }}>
                   Keep Original Parts (Optional)
                 </label>
-                <div className="flex flex-wrap gap-3">
+                <div className="flex gap-2" style={{ flexWrap: 'wrap' }}>
                   {['Soprano', 'Alto', 'Tenor', 'Bass'].map(part => (
                     <button 
                       key={part}
                       onClick={() => toggleKeepPart(part)}
-                      className={`px-4 py-2 rounded-full border transition-all text-sm font-medium flex items-center gap-2
-                        ${keepParts.includes(part)
-                          ? 'border-[var(--accent-color)] bg-[var(--accent-color)]/20 text-white shadow-[0_0_15px_rgba(217,70,239,0.3)]' 
-                          : 'border-[var(--border-color)] bg-transparent text-[var(--text-secondary)] hover:border-[var(--text-secondary)]'
-                        }`}
+                      className={`badge badge-btn ${keepParts.includes(part) ? 'badge-active' : ''}`}
                     >
                       {keepParts.includes(part) ? (
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ marginRight: '6px', display: 'inline' }}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg>
                       ) : (
-                        <svg className="w-4 h-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
+                        <span style={{ display: 'inline-block', width: '20px' }}></span>
                       )}
                       {part}
                     </button>
