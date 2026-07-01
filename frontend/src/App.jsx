@@ -724,7 +724,6 @@ function App() {
             Instagram
           </a>
         </div>
-        <p>© 2026 Antigravity. All rights reserved.</p>
       </footer>
 
       {/* Global Now Playing Widget */}
