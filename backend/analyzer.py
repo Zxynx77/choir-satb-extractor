@@ -783,8 +783,7 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
                 n.volume.velocity = 70  # Lower velocity to prevent WebAudio compressor clipping
                 parts[part_name].append(n)
                 
-    if harmony_style == 'traditional':
-        decorate_chorale(parts, detected_key)
+
         
     # ===== RHYTHM RESTORATION (LEGATO PASS) =====
     # Merge consecutive identical notes and rests to prevent robotic re-articulations
