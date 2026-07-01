@@ -14,10 +14,9 @@ def get_key_of_score(score):
         return key.Key('C')
         
     for n in flat_notes:
-        try:
-            beat = float(n.beat)
-        except:
-            beat = float((n.offset % 4) + 1.0)
+        # music21's .beat property is extremely slow on flattened streams because it searches context.
+        # We can just calculate the beat position assuming 4/4 time.
+        beat = float((n.offset % 4) + 1.0)
             
         if isinstance(n, note.Note):
             notes_data.append({
