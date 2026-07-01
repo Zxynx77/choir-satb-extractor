@@ -4,6 +4,7 @@ FROM python:3.9-slim
 RUN apt-get update && apt-get install -y \
     fluidsynth \
     ffmpeg \
+    fluid-soundfont-gm \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory

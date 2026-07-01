@@ -1005,13 +1005,20 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
             from midi2audio import FluidSynth
             from pydub import AudioSegment
             
-            # Ensure soundfont exists
-            sf2_path = os.path.join(output_dir, "soundfont.sf2")
+            # 1. Use system soundfont if in Docker, otherwise fallback to local download
+            sf2_path = "/usr/share/sounds/sf2/FluidR3_GM.sf2"
             if not os.path.exists(sf2_path):
-                print("Downloading soundfont for backend audio rendering...")
-                sf2_url = "https://cdn.jsdelivr.net/gh/roehound/Soundfonts@master/FluidR3_GM.sf2" if instrument_type == "piano" else "https://cdn.jsdelivr.net/gh/roehound/Soundfonts@master/FluidR3_GM.sf2"
-                urllib.request.urlretrieve(sf2_url, sf2_path)
+                sf2_path = os.path.join(output_dir, "soundfont.sf2")
+                if not os.path.exists(sf2_path):
+                    print("Downloading soundfont for backend audio rendering...")
+                    sf2_url = "https://raw.githubusercontent.com/fluid-project/fluid-soundfont/master/FluidR3_GM.sf2" # Best effort fallback
+                    try:
+                        urllib.request.urlretrieve(sf2_url, sf2_path)
+                    except Exception as e:
+                        print(f"Warning: Failed to download soundfont: {e}")
+                        raise Exception("Soundfont download failed. Audio rendering aborted.")
             
+            # Initialize FluidSynth with the soundfont
             fs = FluidSynth(sf2_path)
             
             # Convert each generated MIDI file to MP3
