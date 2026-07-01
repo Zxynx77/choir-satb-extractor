@@ -454,7 +454,9 @@ function App() {
                     left: 0,
                     right: 0,
                     marginTop: '8px',
-                    background: '#1a1a2e',
+                    background: 'rgba(15, 23, 42, 0.85)',
+                    backdropFilter: 'blur(16px)',
+                    WebkitBackdropFilter: 'blur(16px)',
                     border: '1px solid rgba(255,255,255,0.1)',
                     borderRadius: '8px',
                     fontFamily: 'inherit',
@@ -490,7 +492,8 @@ function App() {
                           cursor: 'pointer',
                           background: keyOverride === opt.val ? 'rgba(217, 70, 239, 0.15)' : 'transparent',
                           border: 'none',
-                          color: '#fff',
+                          border: 'none',
+                          color: keyOverride === opt.val ? '#fff' : 'var(--text-secondary)',
                           fontWeight: keyOverride === opt.val ? '500' : 'normal',
                           boxShadow: 'none',
                           marginBottom: '2px',
@@ -499,11 +502,13 @@ function App() {
                         onMouseEnter={(e) => { 
                           if (keyOverride !== opt.val) {
                             e.target.style.background = 'rgba(255,255,255,0.1)'; 
+                            e.target.style.color = '#fff';
                           } 
                         }}
                         onMouseLeave={(e) => { 
                           if (keyOverride !== opt.val) {
                             e.target.style.background = 'transparent'; 
+                            e.target.style.color = 'var(--text-secondary)';
                           } 
                         }}
                       >
