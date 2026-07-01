@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Upload, Music, Image, FileText, Download, Loader, CheckCircle, AlertTriangle, Play, Pause, X, Square, Settings, FileBox } from 'lucide-react';
+import { Upload, Music, Image, FileText, Download, Loader, CheckCircle, AlertTriangle, Play, Pause, X, Square, Settings, FileBox, Headphones } from 'lucide-react';
 import SheetMusicViewer from './SheetMusicViewer';
 import 'html-midi-player';
 import './index.css';
