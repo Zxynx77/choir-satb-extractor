@@ -1,6 +1,6 @@
 import os
 import uuid
-from music21 import converter, stream, note, chord, tempo, meter, key, pitch, instrument, clef, analysis, harmony, tie
+from music21 import converter, stream, note, chord, tempo, meter, key, pitch, instrument, clef, analysis, harmony, tie, duration
 
 def get_key_of_score(score):
     """Analyze the key of the input score."""
