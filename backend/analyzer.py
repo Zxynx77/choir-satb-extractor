@@ -998,7 +998,7 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
     # ===== AUDIO RENDERING (MP3/WAV) =====
     # We attempt to use fluidsynth to render the MIDI files into actual audio files.
     # This provides perfect playback on the frontend without relying on buggy JS MIDI players.
-    has_fluidsynth = shutil.which("fluidsynth") is not None
+    has_fluidsynth = True # Force it to true so we get the exact stack trace if it fails
     audio_engine_error = None
     
     if has_fluidsynth:

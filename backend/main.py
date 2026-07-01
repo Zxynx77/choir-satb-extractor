@@ -101,6 +101,7 @@ async def analyze_midi(
         result = process_midi(converted_path, ranges, TEMP_DIR, harmony_style, user_tempo, instrument_type, chord_overrides, keep_parts_list, key_override)
         
         return JSONResponse(content={
+            "success": True,
             "message": "Analysis successful",
             "files": result["files"],
             "errors": result["errors"],
