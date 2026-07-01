@@ -190,7 +190,7 @@ def generate_voicings_for_chord(chord_info, fixed_parts, ranges, scale_key=None,
                     if harmony_style in ['traditional', 'strict']:
                         q = chord_info.get('quality', 'other')
                         if q == 'minor':
-                            penalty += 15
+                            penalty += 3  # Minor chords are natural in hymns (ii, iii, vi)
                         elif q == 'diminished':
                             penalty += 25
                         elif q == 'other':
@@ -247,36 +247,37 @@ def decorate_chorale(parts, scale_key):
     Post-processes the generated SATB parts to add Bach Chorale fingerprints:
     1. Diatonic passing tones in the bass.
     2. Cadential suspensions (delaying the resolution).
+    
+    Uses append-based stream construction to prevent overlapping notes.
     """
-    bass_part = parts['Bass']
     scale_pcs = get_scale_pitches(scale_key) if scale_key else set()
     
     # 1. Bass Passing Tones
-    # Create a new stream for the modified bass
-    new_bass = stream.Part()
-    for el in bass_part:
-        if not isinstance(el, note.Note):
-            new_bass.append(el)
-            continue
-            
-        new_bass.append(el)
+    bass_part = parts['Bass']
+    bass_notes = [el for el in bass_part if isinstance(el, note.Note)]
+    bass_other = [el for el in bass_part if not isinstance(el, note.Note)]
     
-    # We need to iterate by index to look ahead
-    notes = [n for n in new_bass if isinstance(n, note.Note)]
-    for i in range(len(notes) - 1):
-        n1 = notes[i]
-        n2 = notes[i+1]
-        
-        if n1.quarterLength >= 1.0:
+    new_bass = stream.Part()
+    for el in bass_other:
+        new_bass.append(copy.deepcopy(el))
+    
+    for i, n1 in enumerate(bass_notes):
+        if i < len(bass_notes) - 1:
+            n2 = bass_notes[i + 1]
             interval = n2.pitch.ps - n1.pitch.ps
-            if abs(interval) in [3, 4]:  # Leap of a 3rd
-                # Split n1
+            
+            # Only add passing tone if note is long enough and leap is a 3rd
+            if n1.quarterLength >= 2.0 and abs(interval) in [3, 4]:
                 half_dur = n1.quarterLength / 2.0
-                n1.quarterLength = half_dur
                 
-                # Find diatonic passing tone
+                # First half: original pitch
+                first_note = copy.deepcopy(n1)
+                first_note.quarterLength = half_dur
+                new_bass.append(first_note)
+                
+                # Second half: diatonic passing tone
                 step = 1 if interval > 0 else -1
-                passing_ps = n1.pitch.ps
+                passing_ps = n1.pitch.ps  # fallback
                 for j in range(1, 3):
                     test_ps = n1.pitch.ps + (j * step)
                     if (test_ps % 12) in scale_pcs:
@@ -286,46 +287,54 @@ def decorate_chorale(parts, scale_key):
                 passing_note = note.Note(passing_ps)
                 passing_note.quarterLength = half_dur
                 passing_note.volume.velocity = 60
-                
-                # Insert it right after n1 using offset
-                new_bass.insert(n1.offset + half_dur, passing_note)
-
+                new_bass.append(passing_note)
+            else:
+                new_bass.append(copy.deepcopy(n1))
+        else:
+            new_bass.append(copy.deepcopy(n1))
+    
     parts['Bass'] = new_bass
 
     # 2. Cadential Suspensions (Alto & Tenor)
     for p_name in ['Alto', 'Tenor']:
         part = parts[p_name]
-        new_part = stream.Part()
-        for el in part:
-            if not isinstance(el, note.Note):
-                new_part.append(el)
-            else:
-                new_part.append(el)
+        part_notes = [el for el in part if isinstance(el, note.Note)]
+        part_other = [el for el in part if not isinstance(el, note.Note)]
         
-        notes = [n for n in new_part if isinstance(n, note.Note)]
-        for i in range(len(notes) - 1):
-            n1 = notes[i]
-            n2 = notes[i+1]
+        new_part = stream.Part()
+        for el in part_other:
+            new_part.append(copy.deepcopy(el))
+        
+        i = 0
+        while i < len(part_notes):
+            n1 = part_notes[i]
             
-            # Look for downward step into a long note (potential cadence)
-            if n1.quarterLength >= 1.0 and n2.quarterLength >= 1.0:
+            if i < len(part_notes) - 1:
+                n2 = part_notes[i + 1]
                 interval = n1.pitch.ps - n2.pitch.ps
-                if interval in [1, 2]: # Downward step (minor or major 2nd)
-                    # Create suspension: delay n2 by taking the first half of it 
-                    # and making it a continuation of n1's pitch
+                
+                # Downward step into a long note = potential cadence
+                if n1.quarterLength >= 2.0 and n2.quarterLength >= 1.0 and interval in [1, 2]:
+                    # Append n1 as-is
+                    new_part.append(copy.deepcopy(n1))
+                    
+                    # Split n2: first half is suspension (holds n1's pitch), second half resolves
                     half_dur = n2.quarterLength / 2.0
-                    n2.quarterLength = half_dur
                     
-                    suspension_note = note.Note(n1.pitch.ps)
-                    suspension_note.quarterLength = half_dur
-                    suspension_note.volume.velocity = n2.volume.velocity
+                    suspension = note.Note(n1.pitch.ps)
+                    suspension.quarterLength = half_dur
+                    suspension.volume.velocity = n2.volume.velocity if hasattr(n2.volume, 'velocity') and n2.volume.velocity else 70
+                    new_part.append(suspension)
                     
-                    # Tie them together so the synth doesn't choke/retrigger
-                    n1.tie = tie.Tie('start')
-                    suspension_note.tie = tie.Tie('stop')
+                    resolution = copy.deepcopy(n2)
+                    resolution.quarterLength = half_dur
+                    new_part.append(resolution)
                     
-                    new_part.insert(n2.offset, suspension_note)
-                    n2.offset += half_dur # Push the resolution back
+                    i += 2  # Skip n2 since we already handled it
+                    continue
+            
+            new_part.append(copy.deepcopy(n1))
+            i += 1
         
         parts[p_name] = new_part
 
