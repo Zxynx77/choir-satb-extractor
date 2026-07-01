@@ -67,6 +67,10 @@ function App() {
     bass_min: 'E2', bass_max: 'C4'
   });
 
+  const soundFontUrl = instrumentType === 'piano' 
+    ? "https://storage.googleapis.com/magentadata/js/soundfonts/salamander"
+    : "https://storage.googleapis.com/magentadata/js/soundfonts/sgm_plus";
+
   // Global Player Tracker & Mutex
   React.useEffect(() => {
     const interval = setInterval(() => {
@@ -682,7 +686,7 @@ function App() {
                       <midi-player 
                         data-track-title="Original Melody (Full Mix)"
                         src={`${API_URL}/download/${filename}`} 
-                        sound-font="https://storage.googleapis.com/magentadata/js/soundfonts/salamander" 
+                        sound-font={soundFontUrl}
                         visualizer="#my-visualizer"
                         style={{ width: '100%', outline: 'none' }}
                       />
@@ -701,7 +705,7 @@ function App() {
                           <midi-player 
                             data-track-title={partLabels[part] || part}
                             src={`${API_URL}/download/${filename}`} 
-                            sound-font="https://storage.googleapis.com/magentadata/js/soundfonts/salamander" 
+                            sound-font={soundFontUrl}
                             style={{ width: '100%', outline: 'none' }}
                           />
                         </div>
