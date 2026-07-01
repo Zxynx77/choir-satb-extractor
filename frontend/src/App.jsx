@@ -106,26 +106,10 @@ function App() {
   };
 
   const handleStartOver = () => {
-    // Web components (like midi-player) might continue running their internal 
-    // audio contexts even if they are unmounted by React. We must explicitly stop them.
-    document.querySelectorAll('midi-player').forEach(player => {
-      try {
-        player.playing = false;
-        if (typeof player.stop === 'function') player.stop();
-        if (typeof player.pause === 'function') player.pause();
-        
-        // As a fallback, remove the source to force it to unload
-        player.removeAttribute('src');
-      } catch (e) {
-        console.error("Error stopping MIDI player:", e);
-      }
-    });
-    
-    // Give the web components 100ms to gracefully close their internal AudioContext 
-    // before React synchronously removes them from the DOM
-    setTimeout(() => {
-      setResults(null);
-    }, 100);
+    // A hard page reload is the absolute most foolproof way to guarantee 
+    // that all Tone.js and WebAudio contexts created by html-midi-player 
+    // are completely destroyed, preventing any ghost audio from playing.
+    window.location.reload();
   };
 
   const handleAnalyze = async () => {
