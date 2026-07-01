@@ -741,6 +741,7 @@ function App() {
             Instagram
           </a>
         </div>
+        <p style={{ marginTop: '1rem' }}>HEHEHEHE</p>
       </footer>
 
       {/* Global Now Playing Widget */}
