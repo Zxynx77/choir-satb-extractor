@@ -405,3 +405,21 @@ midi-player::part(time) {
 midi-player::part(seek-bar) {
   /* Some internal styling adjustments if supported */
 }
+
+/* Custom styling for midi-visualizer */
+midi-visualizer {
+  display: block;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+midi-visualizer::part(note) {
+  fill: var(--accent-color);
+  stroke: #fff;
+  stroke-width: 1px;
+}
+
+midi-visualizer::part(active-note) {
+  fill: #fff;
+}
