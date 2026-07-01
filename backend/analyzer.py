@@ -177,9 +177,6 @@ def generate_voicings_for_chord(chord_info, fixed_parts, ranges, scale_key=None,
                     sa_gap = s - a
                     at_gap = a - t
                     tb_gap = t - b
-                    
-                    if sa_gap > 12 or at_gap > 12:
-                        continue  # Strict 1-octave cap on S-A and A-T lines
                         
                     if sa_gap == 0: penalty += 8
                     if at_gap == 0: penalty += 8
@@ -341,27 +338,63 @@ def transition_cost(prev_voicing, prev_chord, curr_voicing, curr_chord, scale_ke
     errors = []
     names = ['Soprano', 'Alto', 'Tenor', 'Bass']
     
-    # 1. Stepwise motion preference (penalize leaps in inner voices)
-    for i in range(1, 4):  # Alto, Tenor, Bass
+    # 1. Stepwise motion preference — graduated penalties for ALL voices
+    for i in range(4):  # Soprano, Alto, Tenor, Bass
         leap = abs(curr_voicing[i] - prev_voicing[i])
-        if leap <= 2:
-            cost += 0  # Step or unison: free
-        elif leap <= 4:
-            cost += 2  # Small leap: minor penalty
-        elif leap <= 7:
-            cost += 5  # Larger leap
-        else:
-            cost += 25 if harmony_style in ['traditional', 'strict'] else 15  # Big leap: heavy penalty
-            
-        # Strict Stepwise Motion Constraint (2nds/3rds) for inner voices
-        if i in [1, 2] and leap > 4:
-            cost += 10000
+        
+        if i in [1, 2]:  # Alto & Tenor: strictest stepwise constraint
+            if leap <= 2:
+                cost -= 1  # Reward stepwise motion
+            elif leap <= 4:
+                cost += 3  # Minor 3rd / Major 3rd: mild penalty
+            elif leap <= 5:
+                cost += 40  # Perfect 4th: strong penalty
+            elif leap <= 7:
+                cost += 200  # 5th range: very heavy
+            else:
+                cost += 10000  # Anything larger: effectively forbidden
+        elif i == 3:  # Bass: more freedom, but not unlimited
+            if leap <= 2:
+                cost -= 1  # Reward stepwise bass
+            elif leap in [5, 7]:  # P4 or P5 leap in bass
+                cost -= 3  # Reward strong root motion leaps
+            elif leap <= 7:
+                cost += 2  # Other leaps up to a 5th: small penalty
+            elif leap <= 12:
+                cost += 8  # Up to an octave: moderate
+            else:
+                cost += 80  # Larger than octave: heavy penalty
+        else:  # Soprano (i == 0)
+            if leap <= 2:
+                cost -= 1
+            elif leap <= 4:
+                cost += 1
+            elif leap <= 7:
+                cost += 4
+            else:
+                cost += 15
+    
+    # 1b. Voice crossing detection in transitions
+    # Voices must not cross between consecutive beats
+    if curr_voicing[0] < curr_voicing[1]:  # Soprano below Alto
+        cost += 10000
+    if curr_voicing[1] < curr_voicing[2]:  # Alto below Tenor
+        cost += 10000
+    if curr_voicing[2] < curr_voicing[3]:  # Tenor below Bass
+        cost += 10000
 
-    # 2. Parallel 5ths/8ves (STRICTLY FORBIDDEN)
+    # 2. Parallel 5ths/8ves (STRICTLY FORBIDDEN — all styles)
     parallels = check_parallels(prev_voicing, curr_voicing)
     if parallels:
-        cost += 1000000 if harmony_style in ['traditional', 'strict'] else 500
+        cost += 1000000
         errors.extend(parallels)
+    
+    # 2b. Consecutive unisons (two voices on same note two beats in a row)
+    for i in range(4):
+        for j in range(i + 1, 4):
+            if curr_voicing[i] == curr_voicing[j] and prev_voicing[i] == prev_voicing[j]:
+                cost += 500
+                errors.append(f"Consecutive unison: {names[i]}-{names[j]}")
     
     # 3. === PARTWRITER RULE: Direct/Hidden 5ths & 8ves ===
     # When soprano and bass move in the same direction to a P5 or P8,
@@ -728,7 +761,13 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
                 else:
                     if type(current_el) == type(element):
                         if isinstance(element, note.Note) and current_el.pitch.ps == element.pitch.ps:
-                            current_el.duration.quarterLength += element.duration.quarterLength
+                            # Cap merged duration at 4.0 beats (whole note) to prevent
+                            # the web synthesizer from running out of sample and going silent
+                            if current_el.duration.quarterLength + element.duration.quarterLength <= 4.0:
+                                current_el.duration.quarterLength += element.duration.quarterLength
+                            else:
+                                new_part.append(current_el)
+                                current_el = copy.deepcopy(element)
                         elif isinstance(element, note.Rest):
                             current_el.duration.quarterLength += element.duration.quarterLength
                         else:
