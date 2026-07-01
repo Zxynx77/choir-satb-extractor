@@ -55,6 +55,7 @@ function App() {
   const [instrumentType, setInstrumentType] = useState('choir');
   const [chordOverrides, setChordOverrides] = useState('');
   const [keyOverride, setKeyOverride] = useState('');
+  const [showKeyDropdown, setShowKeyDropdown] = useState(false);
 
   const [ranges] = useState({
     soprano_min: 'C4', soprano_max: 'A5',
@@ -401,51 +402,101 @@ function App() {
               </div>
 
               {/* Key Override */}
-              <div style={{ marginBottom: '1.2rem' }}>
+              <div style={{ marginBottom: '1.2rem', position: 'relative' }}>
                 <label style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', display: 'block', marginBottom: '0.5rem' }}>
                   Key Override (Optional)
                 </label>
-                <select
-                  id="keyOverride"
-                  value={keyOverride}
-                  onChange={(e) => setKeyOverride(e.target.value)}
+                
+                <div 
+                  onClick={() => setShowKeyDropdown(!showKeyDropdown)}
                   style={{
                     width: '100%',
-                    padding: '0.6rem',
+                    padding: '0.8rem 1rem',
                     background: 'rgba(255,255,255,0.05)',
                     border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: '6px',
+                    borderRadius: '8px',
                     color: '#fff',
-                    outline: 'none'
+                    cursor: 'pointer',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    transition: 'all 0.2s ease'
                   }}
+                  className="dropdown-toggle hover-bright"
                 >
-                  <option value="" style={{ background: '#1a1a2e' }}>🔍 Auto-Detect (default)</option>
-                  <option value="C" style={{ background: '#1a1a2e' }}>C Major</option>
-                  <option value="c" style={{ background: '#1a1a2e' }}>C Minor</option>
-                  <option value="C#" style={{ background: '#1a1a2e' }}>C♯ Major / D♭ Major</option>
-                  <option value="c#" style={{ background: '#1a1a2e' }}>C♯ Minor / D♭ Minor</option>
-                  <option value="D" style={{ background: '#1a1a2e' }}>D Major</option>
-                  <option value="d" style={{ background: '#1a1a2e' }}>D Minor</option>
-                  <option value="E-" style={{ background: '#1a1a2e' }}>E♭ Major</option>
-                  <option value="e-" style={{ background: '#1a1a2e' }}>E♭ Minor</option>
-                  <option value="E" style={{ background: '#1a1a2e' }}>E Major</option>
-                  <option value="e" style={{ background: '#1a1a2e' }}>E Minor</option>
-                  <option value="F" style={{ background: '#1a1a2e' }}>F Major</option>
-                  <option value="f" style={{ background: '#1a1a2e' }}>F Minor</option>
-                  <option value="F#" style={{ background: '#1a1a2e' }}>F♯ Major / G♭ Major</option>
-                  <option value="f#" style={{ background: '#1a1a2e' }}>F♯ Minor / G♭ Minor</option>
-                  <option value="G" style={{ background: '#1a1a2e' }}>G Major</option>
-                  <option value="g" style={{ background: '#1a1a2e' }}>G Minor</option>
-                  <option value="A-" style={{ background: '#1a1a2e' }}>A♭ Major</option>
-                  <option value="a-" style={{ background: '#1a1a2e' }}>A♭ Minor</option>
-                  <option value="A" style={{ background: '#1a1a2e' }}>A Major</option>
-                  <option value="a" style={{ background: '#1a1a2e' }}>A Minor</option>
-                  <option value="B-" style={{ background: '#1a1a2e' }}>B♭ Major</option>
-                  <option value="b-" style={{ background: '#1a1a2e' }}>B♭ Minor</option>
-                  <option value="B" style={{ background: '#1a1a2e' }}>B Major</option>
-                  <option value="b" style={{ background: '#1a1a2e' }}>B Minor</option>
-                </select>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: '0.4rem' }}>
+                  <span style={{ fontWeight: keyOverride ? '600' : 'normal', color: keyOverride ? 'var(--accent-color)' : '#fff' }}>
+                    {keyOverride === '' ? '🔍 Auto-Detect (default)' : 
+                     keyOverride === 'C' ? 'C Major' : keyOverride === 'c' ? 'C Minor' :
+                     keyOverride === 'C#' ? 'C♯ Major / D♭ Major' : keyOverride === 'c#' ? 'C♯ Minor / D♭ Minor' :
+                     keyOverride === 'D' ? 'D Major' : keyOverride === 'd' ? 'D Minor' :
+                     keyOverride === 'E-' ? 'E♭ Major' : keyOverride === 'e-' ? 'E♭ Minor' :
+                     keyOverride === 'E' ? 'E Major' : keyOverride === 'e' ? 'E Minor' :
+                     keyOverride === 'F' ? 'F Major' : keyOverride === 'f' ? 'F Minor' :
+                     keyOverride === 'F#' ? 'F♯ Major / G♭ Major' : keyOverride === 'f#' ? 'F♯ Minor / G♭ Minor' :
+                     keyOverride === 'G' ? 'G Major' : keyOverride === 'g' ? 'G Minor' :
+                     keyOverride === 'A-' ? 'A♭ Major' : keyOverride === 'a-' ? 'A♭ Minor' :
+                     keyOverride === 'A' ? 'A Major' : keyOverride === 'a' ? 'A Minor' :
+                     keyOverride === 'B-' ? 'B♭ Major' : keyOverride === 'b-' ? 'B♭ Minor' :
+                     keyOverride === 'B' ? 'B Major' : 'B Minor'}
+                  </span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ transform: showKeyDropdown ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }}>
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
+                </div>
+                
+                {showKeyDropdown && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    marginTop: '8px',
+                    background: '#1a1a2e',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: '8px',
+                    boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
+                    zIndex: 100,
+                    maxHeight: '250px',
+                    overflowY: 'auto',
+                    padding: '0.5rem'
+                  }}>
+                    {[
+                      { val: '', label: '🔍 Auto-Detect (default)' },
+                      { val: 'C', label: 'C Major' }, { val: 'c', label: 'C Minor' },
+                      { val: 'C#', label: 'C♯ Major / D♭ Major' }, { val: 'c#', label: 'C♯ Minor / D♭ Minor' },
+                      { val: 'D', label: 'D Major' }, { val: 'd', label: 'D Minor' },
+                      { val: 'E-', label: 'E♭ Major' }, { val: 'e-', label: 'E♭ Minor' },
+                      { val: 'E', label: 'E Major' }, { val: 'e', label: 'E Minor' },
+                      { val: 'F', label: 'F Major' }, { val: 'f', label: 'F Minor' },
+                      { val: 'F#', label: 'F♯ Major / G♭ Major' }, { val: 'f#', label: 'F♯ Minor / G♭ Minor' },
+                      { val: 'G', label: 'G Major' }, { val: 'g', label: 'G Minor' },
+                      { val: 'A-', label: 'A♭ Major' }, { val: 'a-', label: 'A♭ Minor' },
+                      { val: 'A', label: 'A Major' }, { val: 'a', label: 'A Minor' },
+                      { val: 'B-', label: 'B♭ Major' }, { val: 'b-', label: 'B♭ Minor' },
+                      { val: 'B', label: 'B Major' }, { val: 'b', label: 'B Minor' }
+                    ].map(opt => (
+                      <div 
+                        key={opt.val}
+                        onClick={() => { setKeyOverride(opt.val); setShowKeyDropdown(false); }}
+                        style={{
+                          padding: '0.6rem 1rem',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          background: keyOverride === opt.val ? 'var(--accent-color)' : 'transparent',
+                          color: keyOverride === opt.val ? '#fff' : 'var(--text-secondary)',
+                          fontWeight: keyOverride === opt.val ? 'bold' : 'normal',
+                          marginBottom: '2px'
+                        }}
+                        onMouseEnter={(e) => { if (keyOverride !== opt.val) e.target.style.background = 'rgba(255,255,255,0.05)'; }}
+                        onMouseLeave={(e) => { if (keyOverride !== opt.val) e.target.style.background = 'transparent'; }}
+                      >
+                        {opt.label}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: '0.5rem' }}>
                   Leave on Auto-Detect for most hymns. Use this to manually force a key if the AI gets it wrong.
                 </p>
               </div>
