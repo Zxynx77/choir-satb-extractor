@@ -388,7 +388,7 @@ function App() {
                   onChange={(e) => setChordOverrides(e.target.value)}
                   style={{
                     width: '100%',
-                    padding: '0.6rem',
+                    padding: '0.6rem 0.8rem',
                     background: 'rgba(255,255,255,0.05)',
                     border: '1px solid rgba(255,255,255,0.1)',
                     borderRadius: '6px',
@@ -412,10 +412,10 @@ function App() {
                   onClick={() => setShowKeyDropdown(!showKeyDropdown)}
                   style={{
                     width: '100%',
-                    padding: '0.8rem 1rem',
+                    padding: '0.6rem 0.8rem',
                     background: 'rgba(255,255,255,0.05)',
                     border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: '8px',
+                    borderRadius: '6px',
                     color: '#fff',
                     fontFamily: 'inherit',
                     boxSizing: 'border-box',
@@ -427,7 +427,7 @@ function App() {
                   }}
                   className="dropdown-toggle hover-bright"
                 >
-                  <span style={{ fontWeight: keyOverride ? '600' : 'normal', color: keyOverride ? 'var(--accent-color)' : '#fff' }}>
+                  <span style={{ fontSize: '0.9rem', fontWeight: keyOverride ? '600' : 'normal', color: keyOverride ? 'var(--accent-color)' : '#fff' }}>
                     {keyOverride === '' ? '🔍 Auto-Detect (default)' : 
                      keyOverride === 'C' ? 'C Major' : keyOverride === 'c' ? 'C Minor' :
                      keyOverride === 'C#' ? 'C♯ Major / D♭ Major' : keyOverride === 'c#' ? 'C♯ Minor / D♭ Minor' :
