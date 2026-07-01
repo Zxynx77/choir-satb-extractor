@@ -362,3 +362,14 @@ h1, h2, h3, h4, h5, h6 {
     margin-top: 0.5rem;
   }
 }
+
+/* Animations for Now Playing Widget */
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes bounce {
+  0%, 100% { height: 20%; }
+  50% { height: 100%; }
+}
