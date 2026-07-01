@@ -47,6 +47,7 @@ function App() {
   const [playingPart, setPlayingPart] = useState(null);
   const [activeTrack, setActiveTrack] = useState(null); // { node: DOMElement, title: string, isPlaying: boolean }
   const dismissedPlayerRef = useRef(null); // Tracks the player node the user explicitly dismissed
+  const activeNodeRef = useRef(null); // Synchronous ref of the active player for mutual exclusion
   const audioRef = useRef(null);
 
   // Settings
@@ -66,29 +67,49 @@ function App() {
     bass_min: 'E2', bass_max: 'C4'
   });
 
-  // Global Player Tracker
+  // Global Player Tracker & Mutex
   React.useEffect(() => {
     const interval = setInterval(() => {
-      let foundPlaying = false;
+      let playingPlayers = [];
       document.querySelectorAll('midi-player').forEach(player => {
-        if (player.playing) {
-          // Skip this player if the user explicitly dismissed it
-          if (dismissedPlayerRef.current === player) return;
-          foundPlaying = true;
-          const title = player.getAttribute('data-track-title') || 'Playing Audio';
-          setActiveTrack({ node: player, title, isPlaying: true });
+        if (player.playing && dismissedPlayerRef.current !== player) {
+          playingPlayers.push(player);
         }
       });
       
-      if (!foundPlaying) {
+      if (playingPlayers.length === 0) {
         setActiveTrack(prev => {
           if (prev && prev.isPlaying) {
             // Music just stopped naturally (finished playing) — clear the dismissed ref too
             dismissedPlayerRef.current = null;
+            activeNodeRef.current = null;
             return { ...prev, isPlaying: false };
           }
           return prev;
         });
+      } else if (playingPlayers.length === 1) {
+        const player = playingPlayers[0];
+        activeNodeRef.current = player;
+        const title = player.getAttribute('data-track-title') || 'Playing Audio';
+        setActiveTrack({ node: player, title, isPlaying: true });
+      } else {
+        // Multiple players are playing! Stutter/Loudness bug detected.
+        // Find the player that was NOT playing in the previous tick (the newly clicked one)
+        const newestPlayer = playingPlayers.find(p => p !== activeNodeRef.current) || playingPlayers[0];
+        
+        // Stop all other players to prevent Tone.js engine overload & phase doubling
+        document.querySelectorAll('midi-player').forEach(player => {
+          if (player !== newestPlayer) {
+            try { 
+               player.playing = false; 
+               if (typeof player.stop === 'function') player.stop();
+            } catch(e) {}
+          }
+        });
+        
+        activeNodeRef.current = newestPlayer;
+        const title = newestPlayer.getAttribute('data-track-title') || 'Playing Audio';
+        setActiveTrack({ node: newestPlayer, title, isPlaying: true });
       }
     }, 300);
     return () => clearInterval(interval);
