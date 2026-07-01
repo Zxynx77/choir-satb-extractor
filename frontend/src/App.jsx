@@ -46,6 +46,7 @@ function App() {
   const [detectedKey, setDetectedKey] = useState(null);
   const [playingPart, setPlayingPart] = useState(null);
   const [activeTrack, setActiveTrack] = useState(null); // { node: DOMElement, title: string, isPlaying: boolean }
+  const dismissedPlayerRef = useRef(null); // Tracks the player node the user explicitly dismissed
   const audioRef = useRef(null);
 
   // Settings
@@ -71,6 +72,8 @@ function App() {
       let foundPlaying = false;
       document.querySelectorAll('midi-player').forEach(player => {
         if (player.playing) {
+          // Skip this player if the user explicitly dismissed it
+          if (dismissedPlayerRef.current === player) return;
           foundPlaying = true;
           const title = player.getAttribute('data-track-title') || 'Playing Audio';
           setActiveTrack({ node: player, title, isPlaying: true });
@@ -78,7 +81,14 @@ function App() {
       });
       
       if (!foundPlaying) {
-        setActiveTrack(prev => prev ? { ...prev, isPlaying: false } : null);
+        setActiveTrack(prev => {
+          if (prev && prev.isPlaying) {
+            // Music just stopped naturally (finished playing) — clear the dismissed ref too
+            dismissedPlayerRef.current = null;
+            return { ...prev, isPlaying: false };
+          }
+          return prev;
+        });
       }
     }, 300);
     return () => clearInterval(interval);
@@ -126,6 +136,12 @@ function App() {
   };
 
   const handleStartOver = () => {
+    // Stop any playing audio before clearing
+    document.querySelectorAll('midi-player').forEach(player => {
+      try { player.stop(); } catch(e) {}
+    });
+    dismissedPlayerRef.current = null;
+    setActiveTrack(null);
     setResults(null);
   };
 
@@ -787,10 +803,10 @@ function App() {
           <button 
             onClick={() => {
               if (activeTrack.node) {
+                // Mark this player as dismissed so the poller won't re-show the widget
+                dismissedPlayerRef.current = activeTrack.node;
                 try {
-                  activeTrack.node.playing = false;
-                  if (typeof activeTrack.node.stop === 'function') activeTrack.node.stop();
-                  if (typeof activeTrack.node.pause === 'function') activeTrack.node.pause();
+                  activeTrack.node.stop();
                 } catch(e) {}
               }
               setActiveTrack(null);
