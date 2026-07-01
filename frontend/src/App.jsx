@@ -488,14 +488,26 @@ function App() {
                           padding: '0.6rem 1rem',
                           borderRadius: '6px',
                           cursor: 'pointer',
-                          background: keyOverride === opt.val ? 'rgba(217, 70, 239, 0.15)' : 'transparent',
-                          color: keyOverride === opt.val ? 'var(--accent-color)' : 'var(--text-secondary)',
-                          fontWeight: keyOverride === opt.val ? 'bold' : 'normal',
+                          background: keyOverride === opt.val ? 'rgba(99, 102, 241, 0.25)' : 'transparent',
+                          border: keyOverride === opt.val ? '1px solid var(--accent-color)' : '1px solid transparent',
+                          color: keyOverride === opt.val ? 'var(--text-primary)' : 'var(--text-secondary)',
+                          fontWeight: keyOverride === opt.val ? '500' : 'normal',
+                          boxShadow: keyOverride === opt.val ? '0 0 12px rgba(99, 102, 241, 0.2)' : 'none',
                           marginBottom: '2px',
                           transition: 'all 0.2s ease'
                         }}
-                        onMouseEnter={(e) => { if (keyOverride !== opt.val) e.target.style.background = 'rgba(255,255,255,0.05)'; e.target.style.color = keyOverride === opt.val ? 'var(--accent-color)' : '#fff'; }}
-                        onMouseLeave={(e) => { if (keyOverride !== opt.val) e.target.style.background = 'transparent'; e.target.style.color = keyOverride === opt.val ? 'var(--accent-color)' : 'var(--text-secondary)'; }}
+                        onMouseEnter={(e) => { 
+                          if (keyOverride !== opt.val) {
+                            e.target.style.background = 'rgba(255,255,255,0.05)'; 
+                            e.target.style.color = '#fff';
+                          } 
+                        }}
+                        onMouseLeave={(e) => { 
+                          if (keyOverride !== opt.val) {
+                            e.target.style.background = 'transparent'; 
+                            e.target.style.color = 'var(--text-secondary)';
+                          } 
+                        }}
                       >
                         {opt.label}
                       </div>
