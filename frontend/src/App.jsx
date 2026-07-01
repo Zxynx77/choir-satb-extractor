@@ -393,7 +393,8 @@ function App() {
                     border: '1px solid rgba(255,255,255,0.1)',
                     borderRadius: '6px',
                     color: '#fff',
-                    outline: 'none'
+                    outline: 'none',
+                    boxSizing: 'border-box'
                   }}
                 />
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: '0.4rem' }}>
@@ -417,6 +418,7 @@ function App() {
                     borderRadius: '8px',
                     color: '#fff',
                     fontFamily: 'inherit',
+                    boxSizing: 'border-box',
                     cursor: 'pointer',
                     display: 'flex',
                     justifyContent: 'space-between',
