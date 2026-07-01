@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Upload, Music, Image, FileText, Download, Loader, CheckCircle, AlertTriangle, Play, Pause, X, Square, Settings, FileBox, Headphones } from 'lucide-react';
+import { Upload, Music, Image, FileText, Download, Loader, CheckCircle, AlertTriangle, Play, Pause, X, Square, Settings, FileBox } from 'lucide-react';
 import SheetMusicViewer from './SheetMusicViewer';
 import 'html-midi-player';
 import './index.css';
@@ -690,94 +690,87 @@ function App() {
               </span>
             </div>
 
-            <div className="results-container">
-              {/* 1. Full Arrangement Section */}
-              {results['combined'] && (
-                <div className="mb-8">
-                  <h3 className="mb-4 text-gradient flex items-center gap-2"><Music size={20} /> Full Arrangement</h3>
-                  <div className="glass-panel" style={{ padding: '1.2rem', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)' }}>
-                    <div className="flex gap-2 items-center mb-3">
-                      <span style={{ fontWeight: '600', color: '#fff', fontSize: '1.1rem' }}>Full SATB Score</span>
-                      <a href={`${API_URL}/download/${results['combined']}`} className="btn ml-auto" download>
-                        <Download size={16} style={{ display: 'inline', marginRight: '6px' }} /> MIDI
-                      </a>
-                      {results['combined_audio'] && (
-                         <a href={`${API_URL}/download/${results['combined_audio']}`} className="btn btn-primary" download>
-                           <Download size={16} style={{ display: 'inline', marginRight: '6px' }} /> MP3 Audio
-                         </a>
+            <p className="mb-4">Download each voice part below. Open in any MIDI player to hear the choir arrangement.</p>
+            
+            <div className="grid grid-cols-1 gap-4" style={{ display: 'flex', flexDirection: 'column' }}>
+              {Object.keys(results)
+                .filter(k => !k.endsWith('_audio') && k !== 'musicxml' && k !== 'pdf')
+                .map(part => {
+                const filename = results[part];
+                const audioFilename = results[part + '_audio'];
+                
+                return (
+                <div key={part} className="flex gap-2 items-center" style={{ padding: '0.8rem', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  
+                  {/* For combined track, show the web player with visualizer */}
+                  {part === 'combined' ? (
+                    <div style={{ flex: 1 }}>
+                      <div className="flex gap-2 items-center mb-2">
+                        <span style={{ fontWeight: '500', color: '#fff' }}>{partLabels[part] || part}</span>
+                        <a href={`${API_URL}/download/${filename}`} className="btn ml-auto" download>
+                          <Download size={16} style={{ display: 'inline', marginRight: '6px' }} /> MIDI
+                        </a>
+                        {audioFilename && (
+                           <a href={`${API_URL}/download/${audioFilename}`} className="btn" download>
+                             <Download size={16} style={{ display: 'inline', marginRight: '6px' }} /> Audio
+                           </a>
+                        )}
+                      </div>
+                      
+                      {audioFilename ? (
+                         <audio 
+                           controls 
+                           src={`${API_URL}/download/${audioFilename}`} 
+                           data-track-title="Original Melody (Full Mix)"
+                           style={{ width: '100%', outline: 'none', filter: 'invert(1) hue-rotate(180deg) opacity(0.85)', marginTop: '8px' }}
+                         />
+                      ) : (
+                        <>
+                          <midi-player 
+                            data-track-title="Original Melody (Full Mix)"
+                            src={`${API_URL}/download/${filename}`} 
+                            sound-font={soundFontUrl}
+                            visualizer="#my-visualizer"
+                            style={{ width: '100%', outline: 'none' }}
+                          />
+                          <midi-visualizer type="waterfall" id="my-visualizer" style={{ width: '100%', height: '150px', marginTop: '10px' }}></midi-visualizer>
+                        </>
                       )}
                     </div>
-                    {results['combined_audio'] && (
-                      <audio 
-                        controls 
-                        src={`${API_URL}/download/${results['combined_audio']}`} 
-                        data-track-title="Full SATB Mix"
-                        style={{ width: '100%', outline: 'none', filter: 'invert(1) hue-rotate(180deg) opacity(0.85)', borderRadius: '50px' }}
-                      />
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* 2. Individual Voices Section */}
-              <div className="mb-8">
-                <h3 className="mb-4 text-gradient flex items-center gap-2"><Music size={20} /> Individual Voices</h3>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem' }}>
-                  {['soprano', 'alto', 'tenor', 'bass'].map(part => {
-                    if (!results[part]) return null;
-                    const filename = results[part];
-                    const audioFilename = results[part + '_audio'];
-                    return (
-                      <div key={part} className="glass-panel flex flex-col" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                        <div className="flex items-center gap-2 mb-3">
-                          <span style={{ fontWeight: '600', color: '#fff' }}>{partLabels[part]}</span>
-                          <a href={`${API_URL}/download/${filename}`} className="btn ml-auto" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }} download>
-                            <Download size={14} style={{ display: 'inline' }} />
-                          </a>
-                        </div>
-                        {audioFilename && (
-                          <audio 
-                            controls 
-                            src={`${API_URL}/download/${audioFilename}`} 
-                            data-track-title={partLabels[part]}
-                            style={{ width: '100%', outline: 'none', filter: 'invert(1) hue-rotate(180deg) opacity(0.85)', borderRadius: '50px' }}
-                          />
+                  ) : (
+                    <div className="flex gap-4 items-center w-full" style={{ flexWrap: 'wrap' }}>
+                      <div className="flex items-center gap-2" style={{ minWidth: '150px' }}>
+                        {filename.endsWith('.pdf') && <FileBox size={16} />}
+                        <span style={{ fontWeight: '500', color: '#fff' }}>{partLabels[part] || part}</span>
+                      </div>
+                      
+                      <div style={{ flex: 1, minWidth: '200px' }}>
+                        {audioFilename ? (
+                           <audio 
+                             controls 
+                             src={`${API_URL}/download/${audioFilename}`} 
+                             data-track-title={partLabels[part] || part}
+                             style={{ width: '100%', outline: 'none', filter: 'invert(1) hue-rotate(180deg) opacity(0.85)' }}
+                           />
+                        ) : (
+                           filename.endsWith('.mid') && (
+                             <midi-player 
+                               data-track-title={partLabels[part] || part}
+                               src={`${API_URL}/download/${filename}`} 
+                               sound-font={soundFontUrl}
+                               style={{ width: '100%', outline: 'none' }}
+                             />
+                           )
                         )}
                       </div>
-                    );
-                  })}
+                      
+                      <a href={`${API_URL}/download/${filename}`} className="btn ml-auto" download>
+                        <Download size={16} style={{ display: 'inline', marginRight: '6px' }} /> Download
+                      </a>
+                    </div>
+                  )}
                 </div>
-              </div>
-
-              {/* 3. Practice Tracks Section */}
-              <div className="mb-8">
-                <h3 className="mb-4 text-gradient flex items-center gap-2"><Headphones size={20} /> Part-Predominant Practice Tracks</h3>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem' }}>
-                  {['practice_soprano', 'practice_alto', 'practice_tenor', 'practice_bass'].map(part => {
-                    if (!results[part]) return null;
-                    const filename = results[part];
-                    const audioFilename = results[part + '_audio'];
-                    return (
-                      <div key={part} className="glass-panel flex flex-col" style={{ padding: '1rem', background: 'rgba(217, 70, 239, 0.05)', borderRadius: '12px', border: '1px solid rgba(217, 70, 239, 0.15)' }}>
-                        <div className="flex items-center gap-2 mb-3">
-                          <span style={{ fontWeight: '600', color: '#fff' }}>{partLabels[part]}</span>
-                          <a href={`${API_URL}/download/${filename}`} className="btn ml-auto" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }} download>
-                            <Download size={14} style={{ display: 'inline' }} />
-                          </a>
-                        </div>
-                        {audioFilename && (
-                          <audio 
-                            controls 
-                            src={`${API_URL}/download/${audioFilename}`} 
-                            data-track-title={partLabels[part]}
-                            style={{ width: '100%', outline: 'none', filter: 'invert(1) hue-rotate(180deg) opacity(0.85)', borderRadius: '50px' }}
-                          />
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+              )})}
             </div>
             
             {results['musicxml'] && (
