@@ -178,6 +178,9 @@ def generate_voicings_for_chord(chord_info, fixed_parts, ranges, scale_key=None,
                     at_gap = a - t
                     tb_gap = t - b
                     
+                    if sa_gap > 12 or at_gap > 12:
+                        continue  # Strict 1-octave cap on S-A and A-T lines
+                        
                     if sa_gap == 0: penalty += 8
                     if at_gap == 0: penalty += 8
                     if tb_gap == 0: penalty += 12
@@ -349,11 +352,15 @@ def transition_cost(prev_voicing, prev_chord, curr_voicing, curr_chord, scale_ke
             cost += 5  # Larger leap
         else:
             cost += 25 if harmony_style in ['traditional', 'strict'] else 15  # Big leap: heavy penalty
-    
+            
+        # Strict Stepwise Motion Constraint (2nds/3rds) for inner voices
+        if i in [1, 2] and leap > 4:
+            cost += 10000
+
     # 2. Parallel 5ths/8ves (STRICTLY FORBIDDEN)
     parallels = check_parallels(prev_voicing, curr_voicing)
     if parallels:
-        cost += 10000 if harmony_style in ['traditional', 'strict'] else 500
+        cost += 1000000 if harmony_style in ['traditional', 'strict'] else 500
         errors.extend(parallels)
     
     # 3. === PARTWRITER RULE: Direct/Hidden 5ths & 8ves ===
@@ -461,23 +468,30 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
         
     melody_events = []
     for element in score.chordify().flatten().notesAndRests:
-        if element.isRest:
-            melody_events.append(('rest', element.duration, {}))
-        elif element.isNote:
-            if keep_parts_list:
-                melody_events.append(('note', element.duration, {keep_parts_list[0]: element.pitch}))
-            else:
-                melody_events.append(('note', element.duration, {'Soprano': element.pitch}))
-        elif element.isChord:
-            pitches = sorted(element.pitches, key=lambda p: p.ps, reverse=True)
-            fixed_parts = {}
-            if keep_parts_list:
-                for idx, part_name in enumerate(keep_parts_list):
-                    if idx < len(pitches):
-                        fixed_parts[part_name] = pitches[idx]
-            else:
-                fixed_parts['Soprano'] = pitches[0]
-            melody_events.append(('note', element.duration, fixed_parts))
+        dur_left = element.duration.quarterLength
+        while dur_left > 0:
+            chunk_dur = 1.0 if dur_left > 1.0 else dur_left
+            chunk_duration_obj = duration.Duration(chunk_dur)
+            
+            if element.isRest:
+                melody_events.append(('rest', chunk_duration_obj, {}))
+            elif element.isNote:
+                if keep_parts_list:
+                    melody_events.append(('note', chunk_duration_obj, {keep_parts_list[0]: element.pitch}))
+                else:
+                    melody_events.append(('note', chunk_duration_obj, {'Soprano': element.pitch}))
+            elif element.isChord:
+                pitches = sorted(element.pitches, key=lambda p: p.ps, reverse=True)
+                fixed_parts = {}
+                if keep_parts_list:
+                    for idx, part_name in enumerate(keep_parts_list):
+                        if idx < len(pitches):
+                            fixed_parts[part_name] = pitches[idx]
+                else:
+                    fixed_parts['Soprano'] = pitches[0]
+                melody_events.append(('note', chunk_duration_obj, fixed_parts))
+                
+            dur_left -= chunk_dur
     
     if not melody_events:
         raise Exception("No notes found in the MIDI file.")
@@ -688,6 +702,40 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
                 
     if harmony_style == 'traditional':
         decorate_chorale(parts, detected_key)
+        
+    # ===== RHYTHM RESTORATION (LEGATO PASS) =====
+    # Merge consecutive identical notes and rests to prevent robotic re-articulations
+    # caused by quarter-note slicing.
+    for p_name in parts:
+        old_part = parts[p_name]
+        new_part = stream.Part()
+        
+        # Copy non-note elements (clefs, tempo, key, etc)
+        for element in old_part:
+            if not isinstance(element, (note.Note, note.Rest)):
+                new_part.append(copy.deepcopy(element))
+                
+        current_el = None
+        for element in old_part:
+            if isinstance(element, (note.Note, note.Rest)):
+                if current_el is None:
+                    current_el = copy.deepcopy(element)
+                else:
+                    if type(current_el) == type(element):
+                        if isinstance(element, note.Note) and current_el.pitch.ps == element.pitch.ps:
+                            current_el.duration.quarterLength += element.duration.quarterLength
+                        elif isinstance(element, note.Rest):
+                            current_el.duration.quarterLength += element.duration.quarterLength
+                        else:
+                            new_part.append(current_el)
+                            current_el = copy.deepcopy(element)
+                    else:
+                        new_part.append(current_el)
+                        current_el = copy.deepcopy(element)
+        if current_el is not None:
+            new_part.append(current_el)
+            
+        parts[p_name] = new_part
     
     # ===== SAVE FILES =====
     unique_id = str(uuid.uuid4())[:8]
