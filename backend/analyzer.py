@@ -968,7 +968,7 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
     
     satb_score = stream.Score()
     for p_name in ['Soprano', 'Alto', 'Tenor', 'Bass']:
-        satb_score.append(parts[p_name])
+        satb_score.insert(0, parts[p_name])
     
     combined_filename = f"satb_full_{unique_id}.mid"
     combined_filepath = os.path.join(output_dir, combined_filename)
@@ -988,7 +988,7 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
                 # music21 defaults to velocity 90 if not set. 
                 n.volume.velocity = 90 if is_target else 45
             
-            practice_score.append(part_copy)
+            practice_score.insert(0, part_copy)
             
         p_filename = f"practice_{target_part_name.lower()}_{unique_id}.mid"
         p_filepath = os.path.join(output_dir, p_filename)
