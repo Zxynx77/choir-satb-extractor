@@ -463,7 +463,9 @@ function App() {
                     maxHeight: '250px',
                     overflowY: 'auto',
                     padding: '0.5rem'
-                  }}>
+                  }}
+                  className="custom-scrollbar"
+                >
                     {[
                       { val: '', label: '🔍 Auto-Detect (default)' },
                       { val: 'C', label: 'C Major' }, { val: 'c', label: 'C Minor' },
@@ -486,13 +488,14 @@ function App() {
                           padding: '0.6rem 1rem',
                           borderRadius: '6px',
                           cursor: 'pointer',
-                          background: keyOverride === opt.val ? 'var(--accent-color)' : 'transparent',
-                          color: keyOverride === opt.val ? '#fff' : 'var(--text-secondary)',
+                          background: keyOverride === opt.val ? 'rgba(217, 70, 239, 0.15)' : 'transparent',
+                          color: keyOverride === opt.val ? 'var(--accent-color)' : 'var(--text-secondary)',
                           fontWeight: keyOverride === opt.val ? 'bold' : 'normal',
-                          marginBottom: '2px'
+                          marginBottom: '2px',
+                          transition: 'all 0.2s ease'
                         }}
-                        onMouseEnter={(e) => { if (keyOverride !== opt.val) e.target.style.background = 'rgba(255,255,255,0.05)'; }}
-                        onMouseLeave={(e) => { if (keyOverride !== opt.val) e.target.style.background = 'transparent'; }}
+                        onMouseEnter={(e) => { if (keyOverride !== opt.val) e.target.style.background = 'rgba(255,255,255,0.05)'; e.target.style.color = keyOverride === opt.val ? 'var(--accent-color)' : '#fff'; }}
+                        onMouseLeave={(e) => { if (keyOverride !== opt.val) e.target.style.background = 'transparent'; e.target.style.color = keyOverride === opt.val ? 'var(--accent-color)' : 'var(--text-secondary)'; }}
                       >
                         {opt.label}
                       </div>
