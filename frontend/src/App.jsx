@@ -74,9 +74,11 @@ function App() {
   // Global Player Tracker & Mutex
   React.useEffect(() => {
     const interval = setInterval(() => {
-      let playingPlayers = [];
-      document.querySelectorAll('midi-player').forEach(player => {
-        if (player.playing && dismissedPlayerRef.current !== player) {
+      const playingPlayers = [];
+      document.querySelectorAll('midi-player, audio').forEach(player => {
+        const isAudio = player.tagName.toLowerCase() === 'audio';
+        const isPlaying = isAudio ? !player.paused : player.playing;
+        if (isPlaying && dismissedPlayerRef.current !== player) {
           playingPlayers.push(player);
         }
       });
@@ -105,11 +107,15 @@ function App() {
         const newestPlayer = playingPlayers.find(p => p !== activeNodeRef.current) || playingPlayers[0];
         
         // Stop all other players to prevent Tone.js engine overload & phase doubling
-        document.querySelectorAll('midi-player').forEach(player => {
+        document.querySelectorAll('midi-player, audio').forEach(player => {
           if (player !== newestPlayer) {
             try { 
-               player.playing = false; 
-               if (typeof player.stop === 'function') player.stop();
+               if (player.tagName.toLowerCase() === 'audio') {
+                 player.pause();
+               } else {
+                 player.playing = false; 
+                 if (typeof player.stop === 'function') player.stop();
+               }
             } catch(e) {}
           }
         });
@@ -671,7 +677,13 @@ function App() {
             <p className="mb-4">Download each voice part below. Open in any MIDI player to hear the choir arrangement.</p>
             
             <div className="grid grid-cols-1 gap-4" style={{ display: 'flex', flexDirection: 'column' }}>
-              {Object.entries(results).map(([part, filename]) => (
+              {Object.keys(results)
+                .filter(k => !k.endsWith('_audio') && k !== 'musicxml' && k !== 'pdf')
+                .map(part => {
+                const filename = results[part];
+                const audioFilename = results[part + '_audio'];
+                
+                return (
                 <div key={part} className="flex gap-2 items-center" style={{ padding: '0.8rem', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
                   
                   {/* For combined track, show the web player with visualizer */}
@@ -680,17 +692,34 @@ function App() {
                       <div className="flex gap-2 items-center mb-2">
                         <span style={{ fontWeight: '500', color: '#fff' }}>{partLabels[part] || part}</span>
                         <a href={`${API_URL}/download/${filename}`} className="btn ml-auto" download>
-                          <Download size={16} style={{ display: 'inline', marginRight: '6px' }} /> Download
+                          <Download size={16} style={{ display: 'inline', marginRight: '6px' }} /> MIDI
                         </a>
+                        {audioFilename && (
+                           <a href={`${API_URL}/download/${audioFilename}`} className="btn" download>
+                             <Download size={16} style={{ display: 'inline', marginRight: '6px' }} /> Audio
+                           </a>
+                        )}
                       </div>
-                      <midi-player 
-                        data-track-title="Original Melody (Full Mix)"
-                        src={`${API_URL}/download/${filename}`} 
-                        sound-font={soundFontUrl}
-                        visualizer="#my-visualizer"
-                        style={{ width: '100%', outline: 'none' }}
-                      />
-                      <midi-visualizer type="waterfall" id="my-visualizer" style={{ width: '100%', height: '150px', marginTop: '10px' }}></midi-visualizer>
+                      
+                      {audioFilename ? (
+                         <audio 
+                           controls 
+                           src={`${API_URL}/download/${audioFilename}`} 
+                           data-track-title="Original Melody (Full Mix)"
+                           style={{ width: '100%', outline: 'none', filter: 'invert(1) hue-rotate(180deg) opacity(0.85)', marginTop: '8px' }}
+                         />
+                      ) : (
+                        <>
+                          <midi-player 
+                            data-track-title="Original Melody (Full Mix)"
+                            src={`${API_URL}/download/${filename}`} 
+                            sound-font={soundFontUrl}
+                            visualizer="#my-visualizer"
+                            style={{ width: '100%', outline: 'none' }}
+                          />
+                          <midi-visualizer type="waterfall" id="my-visualizer" style={{ width: '100%', height: '150px', marginTop: '10px' }}></midi-visualizer>
+                        </>
+                      )}
                     </div>
                   ) : (
                     <div className="flex gap-4 items-center w-full" style={{ flexWrap: 'wrap' }}>
@@ -699,17 +728,25 @@ function App() {
                         <span style={{ fontWeight: '500', color: '#fff' }}>{partLabels[part] || part}</span>
                       </div>
                       
-                      {/* Real MIDI Player for individual parts */}
-                      {filename.endsWith('.mid') && (
-                        <div style={{ flex: 1, minWidth: '200px' }}>
-                          <midi-player 
-                            data-track-title={partLabels[part] || part}
-                            src={`${API_URL}/download/${filename}`} 
-                            sound-font={soundFontUrl}
-                            style={{ width: '100%', outline: 'none' }}
-                          />
-                        </div>
-                      )}
+                      <div style={{ flex: 1, minWidth: '200px' }}>
+                        {audioFilename ? (
+                           <audio 
+                             controls 
+                             src={`${API_URL}/download/${audioFilename}`} 
+                             data-track-title={partLabels[part] || part}
+                             style={{ width: '100%', outline: 'none', filter: 'invert(1) hue-rotate(180deg) opacity(0.85)' }}
+                           />
+                        ) : (
+                           filename.endsWith('.mid') && (
+                             <midi-player 
+                               data-track-title={partLabels[part] || part}
+                               src={`${API_URL}/download/${filename}`} 
+                               sound-font={soundFontUrl}
+                               style={{ width: '100%', outline: 'none' }}
+                             />
+                           )
+                        )}
+                      </div>
                       
                       <a href={`${API_URL}/download/${filename}`} className="btn ml-auto" download>
                         <Download size={16} style={{ display: 'inline', marginRight: '6px' }} /> Download
@@ -717,7 +754,7 @@ function App() {
                     </div>
                   )}
                 </div>
-              ))}
+              )})}
             </div>
             
             {results['musicxml'] && (
@@ -812,15 +849,24 @@ function App() {
             onClick={() => {
               if (activeTrack.node) {
                 const willPlay = !activeTrack.isPlaying;
-                activeTrack.node.playing = willPlay;
+                const isAudio = activeTrack.node.tagName.toLowerCase() === 'audio';
                 
-                try {
-                  if (willPlay) {
-                     if (typeof activeTrack.node.start === 'function') activeTrack.node.start();
-                  } else {
-                     if (typeof activeTrack.node.stop === 'function') activeTrack.node.stop();
-                  }
-                } catch(e) {}
+                if (isAudio) {
+                    if (willPlay) {
+                        activeTrack.node.play().catch(()=>{});
+                    } else {
+                        activeTrack.node.pause();
+                    }
+                } else {
+                    activeTrack.node.playing = willPlay;
+                    try {
+                      if (willPlay) {
+                         if (typeof activeTrack.node.start === 'function') activeTrack.node.start();
+                      } else {
+                         if (typeof activeTrack.node.stop === 'function') activeTrack.node.stop();
+                      }
+                    } catch(e) {}
+                }
                 
                 setActiveTrack(prev => ({ ...prev, isPlaying: willPlay }));
               }
@@ -850,7 +896,11 @@ function App() {
                 // Mark this player as dismissed so the poller won't re-show the widget
                 dismissedPlayerRef.current = activeTrack.node;
                 try {
-                  activeTrack.node.stop();
+                  if (activeTrack.node.tagName.toLowerCase() === 'audio') {
+                      activeTrack.node.pause();
+                  } else {
+                      activeTrack.node.stop();
+                  }
                 } catch(e) {}
               }
               setActiveTrack(null);

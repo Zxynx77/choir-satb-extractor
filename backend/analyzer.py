@@ -1,7 +1,31 @@
 import os
 import uuid
 import copy
+import urllib.request
+import logging
+import traceback
+import subprocess
+import shutil
 from music21 import converter, stream, note, chord, tempo, meter, key, pitch, instrument, clef, analysis, harmony, tie, duration
+
+logging.basicConfig(level=logging.INFO)
+
+def ensure_soundfont(sf_path="default.sf2"):
+    """Downloads a soundfont if it doesn't exist."""
+    if not os.path.exists(sf_path):
+        logging.info("Downloading soundfont...")
+        url = "https://github.com/npatfez/sf2/raw/master/SGM-v2.01-NiceLevelTwo.sf2"
+        urllib.request.urlretrieve(url, sf_path)
+    return sf_path
+
+def export_midi_to_audio(midi_path, output_path, sf_path="default.sf2"):
+    """Converts a MIDI file to an audio file using fluidsynth."""
+    ensure_soundfont(sf_path)
+    cmd = ["fluidsynth", "-ni", sf_path, midi_path, "-F", output_path, "-g", "1.0"]
+    try:
+        subprocess.run(cmd, check=True, capture_output=True)
+    except Exception as e:
+        logging.error(f"Failed to render audio: {e}")
 
 def get_key_of_score(score):
     """
@@ -970,6 +994,58 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
         p_filepath = os.path.join(output_dir, p_filename)
         practice_score.write('midi', fp=p_filepath)
         output_files[f"practice_{target_part_name.lower()}"] = p_filename
+    
+    # ===== AUDIO RENDERING (MP3/WAV) =====
+    # We attempt to use fluidsynth to render the MIDI files into actual audio files.
+    # This provides perfect playback on the frontend without relying on buggy JS MIDI players.
+    has_fluidsynth = shutil.which("fluidsynth") is not None
+    
+    if has_fluidsynth:
+        try:
+            from midi2audio import FluidSynth
+            from pydub import AudioSegment
+            
+            # Ensure soundfont exists
+            sf2_path = os.path.join(output_dir, "soundfont.sf2")
+            if not os.path.exists(sf2_path):
+                print("Downloading soundfont for backend audio rendering...")
+                sf2_url = "https://cdn.jsdelivr.net/gh/roehound/Soundfonts@master/FluidR3_GM.sf2" if instrument_type == "piano" else "https://cdn.jsdelivr.net/gh/roehound/Soundfonts@master/FluidR3_GM.sf2"
+                urllib.request.urlretrieve(sf2_url, sf2_path)
+            
+            fs = FluidSynth(sf2_path)
+            
+            # Convert each generated MIDI file to MP3
+            audio_files = {}
+            for key_name, mid_filename in output_files.items():
+                if not mid_filename.endswith('.mid'): continue
+                
+                mid_filepath = os.path.join(output_dir, mid_filename)
+                wav_filename = mid_filename.replace('.mid', '.wav')
+                wav_filepath = os.path.join(output_dir, wav_filename)
+                mp3_filename = mid_filename.replace('.mid', '.mp3')
+                mp3_filepath = os.path.join(output_dir, mp3_filename)
+                
+                # 1. Convert MIDI to WAV using FluidSynth
+                fs.midi_to_audio(mid_filepath, wav_filepath)
+                
+                # 2. Convert WAV to MP3 using Pydub (if ffmpeg is available)
+                try:
+                    audio = AudioSegment.from_wav(wav_filepath)
+                    audio.export(mp3_filepath, format="mp3", bitrate="192k")
+                    audio_files[key_name + "_audio"] = mp3_filename
+                    # Clean up the large WAV file
+                    os.remove(wav_filepath)
+                except Exception as mp3_e:
+                    print(f"MP3 conversion failed (ffmpeg missing?), falling back to WAV: {mp3_e}")
+                    audio_files[key_name + "_audio"] = wav_filename
+            
+            # Merge audio files into output_files
+            output_files.update(audio_files)
+            
+        except Exception as e:
+            print(f"Audio rendering failed: {e}")
+    else:
+        print("Fluidsynth not found on system. Skipping backend audio rendering.")
     
     # MusicXML export
     musicxml_filename = f"satb_score_{unique_id}.musicxml"
