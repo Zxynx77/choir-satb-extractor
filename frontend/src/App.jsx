@@ -489,11 +489,11 @@ function App() {
                       </div>
                       <midi-player 
                         src={`${API_URL}/download/${filename}`} 
-                        sound-font 
+                        sound-font="https://storage.googleapis.com/magentadata/js/soundfonts/sgm_plus" 
                         visualizer="#my-visualizer"
                         style={{ width: '100%', outline: 'none' }}
                       />
-                      <midi-visualizer type="piano-roll" id="my-visualizer" style={{ width: '100%', height: '80px', marginTop: '10px' }}></midi-visualizer>
+                      <midi-visualizer type="waterfall" id="my-visualizer" style={{ width: '100%', height: '150px', marginTop: '10px' }}></midi-visualizer>
                     </div>
                   ) : (
                     <div className="flex gap-4 items-center w-full" style={{ flexWrap: 'wrap' }}>
@@ -507,7 +507,7 @@ function App() {
                         <div style={{ flex: 1, minWidth: '200px' }}>
                           <midi-player 
                             src={`${API_URL}/download/${filename}`} 
-                            sound-font 
+                            sound-font="https://storage.googleapis.com/magentadata/js/soundfonts/sgm_plus" 
                             style={{ width: '100%', outline: 'none' }}
                           />
                         </div>
