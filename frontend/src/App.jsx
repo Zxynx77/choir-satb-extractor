@@ -55,7 +55,7 @@ function App() {
   const [tempoBpm, setTempoBpm] = useState(100);
   const [keepParts, setKeepParts] = useState([]);
   const [showSettings, setShowSettings] = useState(false);
-  const [instrumentType, setInstrumentType] = useState('choir');
+  const [instrumentType, setInstrumentType] = useState('piano');
   const [chordOverrides, setChordOverrides] = useState('');
   const [keyOverride, setKeyOverride] = useState('');
   const [showKeyDropdown, setShowKeyDropdown] = useState(false);
@@ -682,7 +682,7 @@ function App() {
                       <midi-player 
                         data-track-title="Original Melody (Full Mix)"
                         src={`${API_URL}/download/${filename}`} 
-                        sound-font="https://storage.googleapis.com/magentadata/js/soundfonts/sgm_plus" 
+                        sound-font="https://storage.googleapis.com/magentadata/js/soundfonts/salamander" 
                         visualizer="#my-visualizer"
                         style={{ width: '100%', outline: 'none' }}
                       />
@@ -701,7 +701,7 @@ function App() {
                           <midi-player 
                             data-track-title={partLabels[part] || part}
                             src={`${API_URL}/download/${filename}`} 
-                            sound-font="https://storage.googleapis.com/magentadata/js/soundfonts/sgm_plus" 
+                            sound-font="https://storage.googleapis.com/magentadata/js/soundfonts/salamander" 
                             style={{ width: '100%', outline: 'none' }}
                           />
                         </div>
