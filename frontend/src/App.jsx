@@ -105,6 +105,20 @@ function App() {
     );
   };
 
+  const handleStartOver = () => {
+    // Web components (like midi-player) might continue running their internal 
+    // audio contexts even if they are unmounted by React. We must explicitly stop them.
+    document.querySelectorAll('midi-player').forEach(player => {
+      try {
+        player.playing = false;
+        if (typeof player.stop === 'function') player.stop();
+      } catch (e) {
+        console.error("Error stopping MIDI player:", e);
+      }
+    });
+    setResults(null);
+  };
+
   const handleAnalyze = async () => {
     if (!file) return;
     
@@ -654,7 +668,11 @@ function App() {
               </div>
             )}
             
-            <button className="btn w-full mt-6" onClick={() => setResults(null)}>
+            <button 
+              className="btn w-full" 
+              style={{ marginTop: '3rem' }} 
+              onClick={handleStartOver}
+            >
               Start Over
             </button>
           </div>
