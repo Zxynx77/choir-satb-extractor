@@ -106,10 +106,7 @@ function App() {
   };
 
   const handleStartOver = () => {
-    // A hard page reload is the absolute most foolproof way to guarantee 
-    // that all Tone.js and WebAudio contexts created by html-midi-player 
-    // are completely destroyed, preventing any ghost audio from playing.
-    window.location.reload();
+    setResults(null);
   };
 
   const handleAnalyze = async () => {
