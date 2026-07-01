@@ -603,7 +603,7 @@ def transition_cost(prev_voicing, prev_chord, curr_voicing, curr_chord, next_mel
     
     return cost, errors
 
-def process_midi(input_path, ranges_str, output_dir, harmony_style='close', tempo_bpm=None, instrument_type='choir', chord_overrides='', keep_parts_list=None):
+def process_midi(input_path, ranges_str, output_dir, harmony_style='close', tempo_bpm=None, instrument_type='choir', chord_overrides='', keep_parts_list=None, key_override=''):
     """
     Takes a MIDI file and generates full SATB harmony.
     If keep_parts_list is provided, it maps the highest to lowest pitches in the file
@@ -613,9 +613,18 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
     print(f"Harmonizing melody: {input_path}")
     score = converter.parse(input_path)
     
-    # Detect key
-    detected_key = get_key_of_score(score)
-    print(f"Detected key: {detected_key}")
+    # Key detection: use manual override if provided, otherwise auto-detect
+    if key_override and key_override.strip():
+        try:
+            detected_key = key.Key(key_override.strip())
+            print(f"Using manual key override: {detected_key}")
+        except Exception:
+            print(f"Invalid key override '{key_override}', falling back to auto-detection")
+            detected_key = get_key_of_score(score)
+            print(f"Auto-detected key: {detected_key}")
+    else:
+        detected_key = get_key_of_score(score)
+        print(f"Auto-detected key: {detected_key}")
     
     # Convert ranges
     ranges = {

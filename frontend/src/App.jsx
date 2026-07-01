@@ -54,6 +54,7 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [instrumentType, setInstrumentType] = useState('choir');
   const [chordOverrides, setChordOverrides] = useState('');
+  const [keyOverride, setKeyOverride] = useState('');
 
   const [ranges] = useState({
     soprano_min: 'C4', soprano_max: 'A5',
@@ -123,6 +124,7 @@ function App() {
     formData.append('instrument_type', instrumentType);
     formData.append('chord_overrides', chordOverrides);
     formData.append('keep_parts', keepParts.join(','));
+    formData.append('key_override', keyOverride);
 
     try {
       const response = await fetch(`${API_URL}/analyze`, {
@@ -395,6 +397,56 @@ function App() {
                 />
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: '0.4rem' }}>
                   Leave blank for automatic AI harmonization. If provided, the AI will strictly follow these chords.
+                </p>
+              </div>
+
+              {/* Key Override */}
+              <div style={{ marginBottom: '1.2rem' }}>
+                <label style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', display: 'block', marginBottom: '0.5rem' }}>
+                  Key Override (Optional)
+                </label>
+                <select
+                  id="keyOverride"
+                  value={keyOverride}
+                  onChange={(e) => setKeyOverride(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.6rem',
+                    background: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: '6px',
+                    color: '#fff',
+                    outline: 'none'
+                  }}
+                >
+                  <option value="" style={{ background: '#1a1a2e' }}>🔍 Auto-Detect (default)</option>
+                  <option value="C" style={{ background: '#1a1a2e' }}>C Major</option>
+                  <option value="c" style={{ background: '#1a1a2e' }}>C Minor</option>
+                  <option value="C#" style={{ background: '#1a1a2e' }}>C♯ Major / D♭ Major</option>
+                  <option value="c#" style={{ background: '#1a1a2e' }}>C♯ Minor / D♭ Minor</option>
+                  <option value="D" style={{ background: '#1a1a2e' }}>D Major</option>
+                  <option value="d" style={{ background: '#1a1a2e' }}>D Minor</option>
+                  <option value="E-" style={{ background: '#1a1a2e' }}>E♭ Major</option>
+                  <option value="e-" style={{ background: '#1a1a2e' }}>E♭ Minor</option>
+                  <option value="E" style={{ background: '#1a1a2e' }}>E Major</option>
+                  <option value="e" style={{ background: '#1a1a2e' }}>E Minor</option>
+                  <option value="F" style={{ background: '#1a1a2e' }}>F Major</option>
+                  <option value="f" style={{ background: '#1a1a2e' }}>F Minor</option>
+                  <option value="F#" style={{ background: '#1a1a2e' }}>F♯ Major / G♭ Major</option>
+                  <option value="f#" style={{ background: '#1a1a2e' }}>F♯ Minor / G♭ Minor</option>
+                  <option value="G" style={{ background: '#1a1a2e' }}>G Major</option>
+                  <option value="g" style={{ background: '#1a1a2e' }}>G Minor</option>
+                  <option value="A-" style={{ background: '#1a1a2e' }}>A♭ Major</option>
+                  <option value="a-" style={{ background: '#1a1a2e' }}>A♭ Minor</option>
+                  <option value="A" style={{ background: '#1a1a2e' }}>A Major</option>
+                  <option value="a" style={{ background: '#1a1a2e' }}>A Minor</option>
+                  <option value="B-" style={{ background: '#1a1a2e' }}>B♭ Major</option>
+                  <option value="b-" style={{ background: '#1a1a2e' }}>B♭ Minor</option>
+                  <option value="B" style={{ background: '#1a1a2e' }}>B Major</option>
+                  <option value="b" style={{ background: '#1a1a2e' }}>B Minor</option>
+                </select>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: '0.4rem' }}>
+                  Leave on Auto-Detect for most hymns. Use this to manually force a key if the AI gets it wrong.
                 </p>
               </div>
               
