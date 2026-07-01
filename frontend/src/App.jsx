@@ -723,7 +723,7 @@ function App() {
               <div className="mb-8">
                 <h3 className="mb-4 text-gradient flex items-center gap-2"><Music size={20} /> Individual Voices</h3>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem' }}>
-                  {['soprano', 'alto', 'tenor', 'bass'].map(part => {
+                  {['Soprano', 'Alto', 'Tenor', 'Bass'].map(part => {
                     if (!results[part]) return null;
                     const filename = results[part];
                     const audioFilename = results[part + '_audio'];
