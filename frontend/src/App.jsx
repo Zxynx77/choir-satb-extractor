@@ -276,6 +276,7 @@ function App() {
 
           <div 
             className={`upload-zone ${isDragging ? 'active' : ''}`}
+            style={{ marginTop: '1.5rem' }}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
