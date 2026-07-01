@@ -4,12 +4,106 @@ import copy
 from music21 import converter, stream, note, chord, tempo, meter, key, pitch, instrument, clef, analysis, harmony, tie, duration
 
 def get_key_of_score(score):
-    """Analyze the key of the input score."""
-    try:
-        k = score.analyze('key')
-        return k
-    except:
+    """
+    Holistic Key Detection Algorithm
+    Evaluates all 24 keys based on melodic context, durations, cadences, and harmonic function.
+    """
+    notes_data = []
+    flat_notes = score.flatten().notes
+    if not flat_notes:
         return key.Key('C')
+        
+    for n in flat_notes:
+        try:
+            beat = float(n.beat)
+        except:
+            beat = float((n.offset % 4) + 1.0)
+            
+        if isinstance(n, note.Note):
+            notes_data.append({
+                'pc': n.pitch.pitchClass,
+                'dur': n.duration.quarterLength,
+                'beat': beat
+            })
+        elif isinstance(n, chord.Chord):
+            for p in n.pitches:
+                notes_data.append({
+                    'pc': p.pitchClass,
+                    'dur': n.duration.quarterLength,
+                    'beat': beat
+                })
+                
+    if not notes_data:
+        return key.Key('C')
+        
+    first_pc = notes_data[0]['pc']
+    last_pc = notes_data[-1]['pc']
+    
+    candidate_keys = []
+    for i in range(12):
+        p = pitch.Pitch(i)
+        candidate_keys.append(key.Key(p.name, 'major'))
+        candidate_keys.append(key.Key(p.name, 'minor'))
+        
+    scores = {}
+    
+    for k in candidate_keys:
+        k_score = 0.0
+        tonic_pc = k.tonic.pitchClass
+        dom_pc = (tonic_pc + 7) % 12
+        
+        scale_pcs = set(p.pitchClass for p in k.getScale().getPitches('C2', 'B2'))
+        
+        for nd in notes_data:
+            if nd['pc'] in scale_pcs:
+                # 1. Diatonic Fit: Base points for belonging to the scale
+                k_score += nd['dur'] * 3.0
+                
+                # 2. Strong Beat Bonus: Structural notes define the key
+                # Give extra weight if tonic or dominant falls on a strong beat (1 or 3)
+                if (nd['beat'] == 1.0 or nd['beat'] == 3.0) and nd['pc'] in [tonic_pc, dom_pc]:
+                    k_score += nd['dur'] * 4.0
+            else:
+                # Penalty for non-diatonic notes
+                k_score -= nd['dur'] * 2.0
+                
+        # 3. Final Cadence (The "Home" note)
+        if last_pc == tonic_pc:
+            k_score += 30.0
+        elif last_pc == dom_pc:
+            k_score += 5.0
+        else:
+            k_score -= 15.0
+            
+        # 4. Phrase Beginnings
+        if first_pc == tonic_pc:
+            k_score += 15.0
+        elif first_pc == dom_pc:
+            k_score += 5.0
+            
+        # 5. Harmonic Function: Leading Tone Check for Minor Keys
+        if k.mode == 'minor':
+            lt_pc = (tonic_pc + 11) % 12
+            has_lt = any(nd['pc'] == lt_pc for nd in notes_data)
+            
+            if not has_lt:
+                # Without a leading tone, it's highly unlikely to be the true minor key
+                k_score -= 40.0
+            else:
+                k_score += 15.0
+                
+        scores[k] = k_score
+        
+    # Sort keys by confidence score
+    sorted_keys = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+    
+    # Log scores as requested for debugging
+    print("\n=== Key Detection Confidence Scores ===")
+    for k, s in sorted_keys[:5]:
+        print(f"{k.name.replace('-', 'b'):2} {k.mode:5} : {s:.1f}")
+    print("=======================================\n")
+    
+    return sorted_keys[0][0]
 
 def get_scale_pitches(k):
     """Get the pitch classes belonging to this key's scale."""
