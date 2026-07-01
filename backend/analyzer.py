@@ -826,7 +826,7 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
             # Adjust velocity of all notes
             for n in part_copy.recurse().notes:
                 # music21 defaults to velocity 90 if not set. 
-                n.volume.velocity = 90 if is_target else 25
+                n.volume.velocity = 90 if is_target else 45
             
             practice_score.append(part_copy)
             
