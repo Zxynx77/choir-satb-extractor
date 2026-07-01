@@ -112,11 +112,20 @@ function App() {
       try {
         player.playing = false;
         if (typeof player.stop === 'function') player.stop();
+        if (typeof player.pause === 'function') player.pause();
+        
+        // As a fallback, remove the source to force it to unload
+        player.removeAttribute('src');
       } catch (e) {
         console.error("Error stopping MIDI player:", e);
       }
     });
-    setResults(null);
+    
+    // Give the web components 100ms to gracefully close their internal AudioContext 
+    // before React synchronously removes them from the DOM
+    setTimeout(() => {
+      setResults(null);
+    }, 100);
   };
 
   const handleAnalyze = async () => {
