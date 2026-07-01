@@ -9,14 +9,17 @@ def get_key_of_score(score):
     Evaluates all 24 keys based on melodic context, durations, cadences, and harmonic function.
     """
     notes_data = []
-    flat_notes = score.flatten().notes
+    # Use recurse() instead of flatten() to preserve the measure hierarchy.
+    # This makes n.beat extremely fast O(1) and correctly handles pickup measures.
+    flat_notes = score.recurse().notes
     if not flat_notes:
         return key.Key('C')
         
     for n in flat_notes:
-        # music21's .beat property is extremely slow on flattened streams because it searches context.
-        # We can just calculate the beat position assuming 4/4 time.
-        beat = float((n.offset % 4) + 1.0)
+        try:
+            beat = float(n.beat)
+        except:
+            beat = float((n.offset % 4) + 1.0)
             
         if isinstance(n, note.Note):
             notes_data.append({
