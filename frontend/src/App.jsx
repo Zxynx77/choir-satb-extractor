@@ -91,7 +91,10 @@ function App() {
         const player = playingPlayers[0];
         activeNodeRef.current = player;
         const title = player.getAttribute('data-track-title') || 'Playing Audio';
-        setActiveTrack({ node: player, title, isPlaying: true });
+        setActiveTrack(prev => {
+          if (prev && prev.node === player && prev.isPlaying === true) return prev;
+          return { node: player, title, isPlaying: true };
+        });
       } else {
         // Multiple players are playing! Stutter/Loudness bug detected.
         // Find the player that was NOT playing in the previous tick (the newly clicked one)
@@ -109,7 +112,10 @@ function App() {
         
         activeNodeRef.current = newestPlayer;
         const title = newestPlayer.getAttribute('data-track-title') || 'Playing Audio';
-        setActiveTrack({ node: newestPlayer, title, isPlaying: true });
+        setActiveTrack(prev => {
+          if (prev && prev.node === newestPlayer && prev.isPlaying === true) return prev;
+          return { node: newestPlayer, title, isPlaying: true };
+        });
       }
     }, 300);
     return () => clearInterval(interval);
