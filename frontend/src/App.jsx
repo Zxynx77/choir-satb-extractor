@@ -416,7 +416,7 @@ function App() {
                     background: 'rgba(255,255,255,0.05)',
                     border: '1px solid rgba(255,255,255,0.1)',
                     borderRadius: '6px',
-                    color: '#fff',
+                    color: 'var(--text-primary)',
                     fontFamily: 'inherit',
                     boxSizing: 'border-box',
                     cursor: 'pointer',
@@ -427,7 +427,7 @@ function App() {
                   }}
                   className="dropdown-toggle hover-bright"
                 >
-                  <span style={{ fontSize: '0.9rem', fontWeight: keyOverride ? '600' : 'normal', color: keyOverride ? 'var(--accent-color)' : '#fff' }}>
+                  <span style={{ fontSize: '0.9rem', fontWeight: keyOverride ? '600' : 'normal', color: keyOverride ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
                     {keyOverride === '' ? '🔍 Auto-Detect (default)' : 
                      keyOverride === 'C' ? 'C Major' : keyOverride === 'c' ? 'C Minor' :
                      keyOverride === 'C#' ? 'C♯ Major / D♭ Major' : keyOverride === 'c#' ? 'C♯ Minor / D♭ Minor' :
@@ -493,7 +493,7 @@ function App() {
                           background: keyOverride === opt.val ? 'rgba(217, 70, 239, 0.15)' : 'transparent',
                           border: 'none',
                           border: 'none',
-                          color: keyOverride === opt.val ? '#fff' : 'var(--text-secondary)',
+                          color: keyOverride === opt.val ? 'var(--text-primary)' : 'var(--text-secondary)',
                           fontWeight: keyOverride === opt.val ? '500' : 'normal',
                           boxShadow: 'none',
                           marginBottom: '2px',
@@ -502,7 +502,7 @@ function App() {
                         onMouseEnter={(e) => { 
                           if (keyOverride !== opt.val) {
                             e.target.style.background = 'rgba(255,255,255,0.1)'; 
-                            e.target.style.color = '#fff';
+                            e.target.style.color = 'var(--text-primary)';
                           } 
                         }}
                         onMouseLeave={(e) => { 
