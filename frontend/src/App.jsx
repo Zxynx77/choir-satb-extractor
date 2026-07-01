@@ -486,26 +486,24 @@ function App() {
                         onClick={() => { setKeyOverride(opt.val); setShowKeyDropdown(false); }}
                         style={{
                           padding: '0.6rem 1rem',
-                          borderRadius: '6px',
+                          borderRadius: '4px',
                           cursor: 'pointer',
-                          background: keyOverride === opt.val ? 'rgba(99, 102, 241, 0.25)' : 'transparent',
-                          border: keyOverride === opt.val ? '1px solid var(--accent-color)' : '1px solid transparent',
-                          color: keyOverride === opt.val ? 'var(--text-primary)' : 'var(--text-secondary)',
+                          background: keyOverride === opt.val ? 'rgba(217, 70, 239, 0.15)' : 'transparent',
+                          border: 'none',
+                          color: '#fff',
                           fontWeight: keyOverride === opt.val ? '500' : 'normal',
-                          boxShadow: keyOverride === opt.val ? '0 0 12px rgba(99, 102, 241, 0.2)' : 'none',
+                          boxShadow: 'none',
                           marginBottom: '2px',
-                          transition: 'all 0.2s ease'
+                          transition: 'all 0.1s ease'
                         }}
                         onMouseEnter={(e) => { 
                           if (keyOverride !== opt.val) {
-                            e.target.style.background = 'rgba(255,255,255,0.05)'; 
-                            e.target.style.color = '#fff';
+                            e.target.style.background = 'rgba(255,255,255,0.1)'; 
                           } 
                         }}
                         onMouseLeave={(e) => { 
                           if (keyOverride !== opt.val) {
                             e.target.style.background = 'transparent'; 
-                            e.target.style.color = 'var(--text-secondary)';
                           } 
                         }}
                       >
