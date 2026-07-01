@@ -42,37 +42,27 @@ def generate_candidate_chords(melody_pitch, scale_key):
         fifth_pc = scale_pcs[(degree_idx + 4) % 7]
         
         chord_pcs = {root_pc, third_pc, fifth_pc}
+        is_chord_tone = (melody_pitch.pitchClass in chord_pcs)
         
-        # Only keep chords that contain our melody note's pitch class
-        if melody_pitch.pitchClass in chord_pcs:
-            # Determine chord quality for cost purposes
-            third_interval = (third_pc - root_pc) % 12
-            fifth_interval = (fifth_pc - root_pc) % 12
-            
-            if third_interval == 4 and fifth_interval == 7:
-                quality = 'major'
-            elif third_interval == 3 and fifth_interval == 7:
-                quality = 'minor'
-            elif third_interval == 3 and fifth_interval == 6:
-                quality = 'diminished'
-            else:
-                quality = 'other'
-            
-            candidates.append({
-                'root_pc': root_pc,
-                'quality': quality,
-                'pcs': chord_pcs,
-                'degree': degree_idx  # 0=I, 1=II, etc.
-            })
-    
-    # If no diatonic chord contains this note, fall back to just using it as root of major triad
-    if not candidates:
-        root_pc = melody_pitch.pitchClass
+        # Determine chord quality for cost purposes
+        third_interval = (third_pc - root_pc) % 12
+        fifth_interval = (fifth_pc - root_pc) % 12
+        
+        if third_interval == 4 and fifth_interval == 7:
+            quality = 'major'
+        elif third_interval == 3 and fifth_interval == 7:
+            quality = 'minor'
+        elif third_interval == 3 and fifth_interval == 6:
+            quality = 'diminished'
+        else:
+            quality = 'other'
+        
         candidates.append({
             'root_pc': root_pc,
-            'quality': 'major',
-            'pcs': {root_pc, (root_pc + 4) % 12, (root_pc + 7) % 12},
-            'degree': 0
+            'quality': quality,
+            'pcs': chord_pcs,
+            'degree': degree_idx, # 0=I, 1=II, etc.
+            'is_chord_tone': is_chord_tone
         })
     
     return candidates
@@ -339,7 +329,7 @@ def decorate_chorale(parts, scale_key):
         
         parts[p_name] = new_part
 
-def transition_cost(prev_voicing, prev_chord, curr_voicing, curr_chord, scale_key=None, harmony_style='close'):
+def transition_cost(prev_voicing, prev_chord, curr_voicing, curr_chord, next_melody_pitch=None, scale_key=None, harmony_style='close'):
     """
     Calculate the voice-leading cost between two voicings.
     Enforces all PartWriter rules for transitions.
@@ -471,12 +461,47 @@ def transition_cost(prev_voicing, prev_chord, curr_voicing, curr_chord, scale_ke
         elif root_motion == 2 or root_motion == 10:
             cost -= 2  # Stepwise (often good)
         elif root_motion == 0:
-            cost += 1
+            cost -= 3  # Reward staying on the same chord to encourage stable harmonic rhythm across sub-beats
     else:
         if root_motion == 5 or root_motion == 7:
             cost -= 2  # Strong progression (motion by 4th/5th)
         elif root_motion == 0:
-            cost += 1  # Slight penalty for staying on same chord
+            cost -= 1  # Small reward for staying on the same chord
+            
+    # 8. Non-Chord Tone Penalty (Contextual Passing Tone Handling)
+    is_chord_tone = curr_chord.get('is_chord_tone', True)
+    if not is_chord_tone:
+        curr_mel_ps = curr_voicing[0]
+        prev_mel_ps = prev_voicing[0]
+        
+        # Check if approached by step
+        approached_by_step = abs(curr_mel_ps - prev_mel_ps) <= 2 and curr_mel_ps != prev_mel_ps
+        
+        # Check if resolved by step in same direction (if next note exists)
+        resolved_by_step = False
+        if next_melody_pitch:
+            next_mel_ps = next_melody_pitch.ps
+            resolved_by_step = abs(next_mel_ps - curr_mel_ps) <= 2 and next_mel_ps != curr_mel_ps
+            
+            # For a true passing tone, it should continue in the same direction
+            if approached_by_step and resolved_by_step:
+                dir1 = curr_mel_ps - prev_mel_ps
+                dir2 = next_mel_ps - curr_mel_ps
+                if (dir1 > 0 and dir2 < 0) or (dir1 < 0 and dir2 > 0):
+                    # It's a neighbor tone (returns to previous pitch), which is also valid!
+                    pass
+        
+        # If it's approached by step, we give it a very small penalty so it's allowed
+        # If it's approached by step AND resolved by step, it's a true passing/neighbor tone
+        if approached_by_step:
+            if root_motion == 0:
+                cost += 5  # Small penalty, but offset by the -3 reward for root_motion == 0
+            else:
+                cost += 50 # Changing chords ON a passing tone is heavily penalized
+        else:
+            # Leapt to a non-chord tone (appoggiatura / escape tone). Needs a heavy penalty
+            # so the AI prefers to just change the chord to match it.
+            cost += 100
     
     # 8. Contrary motion bonus (soprano vs bass)
     if (s_dir > 0 and b_dir < 0) or (s_dir < 0 and b_dir > 0):
@@ -647,13 +672,20 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
                 best_prev = None
                 best_errors = []
                 
+                # Determine next melody pitch for contextual passing tone analysis
+                next_melody_pitch = None
+                if i + 1 < len(melody_events):
+                    next_etype, _, next_fixed = melody_events[i + 1]
+                    if next_etype == 'note' and next_fixed:
+                        next_melody_pitch = list(next_fixed.values())[0]
+
                 for prev_key, (prev_cost, _, prev_errors) in dp[i - 1].items():
                     if prev_key == 'rest':
                         tc = doubling_penalty
                         new_errors = []
                     else:
                         prev_voicing, prev_chord = state_data[i - 1][prev_key]
-                        tc, new_errors = transition_cost(prev_voicing, prev_chord, voicing, chord_info, detected_key, harmony_style)
+                        tc, new_errors = transition_cost(prev_voicing, prev_chord, voicing, chord_info, next_melody_pitch, detected_key, harmony_style)
                         tc += doubling_penalty
                     
                     total = prev_cost + tc
