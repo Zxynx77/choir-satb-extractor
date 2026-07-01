@@ -999,6 +999,7 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
     # We attempt to use fluidsynth to render the MIDI files into actual audio files.
     # This provides perfect playback on the frontend without relying on buggy JS MIDI players.
     has_fluidsynth = shutil.which("fluidsynth") is not None
+    audio_engine_error = None
     
     if has_fluidsynth:
         try:
@@ -1050,6 +1051,7 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
             output_files.update(audio_files)
             
         except Exception as e:
+            audio_engine_error = str(e)
             print(f"Audio rendering failed: {e}")
     else:
         print("Fluidsynth not found on system. Skipping backend audio rendering.")
@@ -1078,5 +1080,6 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
         "files": output_files,
         "errors": all_errors,
         "key": str(detected_key),
-        "tempo": tempo_bpm
+        "tempo": tempo_bpm,
+        "audio_error": audio_engine_error if audio_engine_error else ("None" if has_fluidsynth else "Missing fluidsynth or soundfont")
     }

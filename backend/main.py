@@ -106,6 +106,7 @@ async def analyze_midi(
             "errors": result["errors"],
             "key": result.get("key", "Unknown"),
             "tempo": result.get("tempo"),
+            "audio_error": result.get("audio_error", "None"),
             "input_type": "image_omr" if ext in SUPPORTED_IMAGE_FORMATS else "direct"
         })
     except ImportError as e:

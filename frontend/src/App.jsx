@@ -40,6 +40,7 @@ function App() {
   const [isDragging, setIsDragging] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [results, setResults] = useState(null);
+  const dataRef = useRef(null);
   const [errorLogs, setErrorLogs] = useState([]);
   const [error, setError] = useState(null);
   const [inputType, setInputType] = useState(null);
@@ -216,9 +217,15 @@ function App() {
       }
 
       const data = await response.json();
-      setResults(data.files);
-      setInputType(data.input_type);
+      if (data.success) {
+        dataRef.current = data;
+        setResults(data.files);
+        setInputType(data.input_type);
+      }
       setDetectedKey(data.key || null);
+      if (data.audio_error && data.audio_error !== 'None') {
+          console.error("Audio error:", data.audio_error);
+      }
       if (data.errors) {
         setErrorLogs(data.errors);
       }
@@ -647,6 +654,15 @@ function App() {
 
       {results && (
         <div className="mt-8" style={{ maxWidth: '700px', margin: '2rem auto 0' }}>
+          
+          {dataRef.current && dataRef.current.audio_error && dataRef.current.audio_error !== 'None' && (
+            <div className="glass-panel mb-4" style={{ border: '1px solid var(--error-color)', background: 'rgba(239, 68, 68, 0.05)' }}>
+              <h3 style={{ color: 'var(--error-color)', marginTop: 0, marginBottom: '8px' }}><AlertTriangle size={18} style={{ display: 'inline', marginRight: '6px' }} /> Audio Engine Failed</h3>
+              <p style={{ margin: 0, opacity: 0.9, fontSize: '0.9rem', fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
+                {dataRef.current.audio_error}
+              </p>
+            </div>
+          )}
           
           {inputType === 'image_omr' && (
             <div className="glass-panel mb-4" style={{ border: '1px solid rgba(168, 85, 247, 0.4)', background: 'rgba(168, 85, 247, 0.05)' }}>
