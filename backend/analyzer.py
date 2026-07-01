@@ -1038,9 +1038,10 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
                 
                 # 2. Convert WAV to MP3 using Pydub (if ffmpeg is available)
                 try:
+                    from pydub.effects import normalize
                     audio = AudioSegment.from_wav(wav_filepath)
-                    # Boost volume by 12 decibels (FluidSynth defaults are very quiet)
-                    audio = audio + 12
+                    # Normalize maximizes the volume perfectly without causing distortion
+                    audio = normalize(audio)
                     audio.export(mp3_filepath, format="mp3", bitrate="192k")
                     audio_files[key_name + "_audio"] = mp3_filename
                     # Clean up the large WAV file
