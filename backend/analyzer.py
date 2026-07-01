@@ -470,15 +470,11 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
     for element in score.chordify().flatten().notesAndRests:
         dur_left = element.duration.quarterLength
         
-        # In Strict Block Chords style, we do NOT slice the notes into quarter-note harmonic rhythms
-        if harmony_style == 'strict':
-            chunk_list = [dur_left]
-        else:
-            chunk_list = []
-            while dur_left > 0:
-                chunk_dur = 1.0 if dur_left > 1.0 else dur_left
-                chunk_list.append(chunk_dur)
-                dur_left -= chunk_dur
+        chunk_list = []
+        while dur_left > 0:
+            chunk_dur = 1.0 if dur_left > 1.0 else dur_left
+            chunk_list.append(chunk_dur)
+            dur_left -= chunk_dur
                 
         for chunk_dur in chunk_list:
             chunk_duration_obj = duration.Duration(chunk_dur)
@@ -713,38 +709,38 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
         
     # ===== RHYTHM RESTORATION (LEGATO PASS) =====
     # Merge consecutive identical notes and rests to prevent robotic re-articulations
-    # caused by quarter-note slicing.
-    if harmony_style != 'strict':
-        for p_name in parts:
-            old_part = parts[p_name]
-            new_part = stream.Part()
-            
-            # Copy non-note elements (clefs, tempo, key, etc)
-            for element in old_part:
-                if not isinstance(element, (note.Note, note.Rest)):
-                    new_part.append(copy.deepcopy(element))
-                    
-            current_el = None
-            for element in old_part:
-                if isinstance(element, (note.Note, note.Rest)):
-                    if current_el is None:
-                        current_el = copy.deepcopy(element)
-                    else:
-                        if type(current_el) == type(element):
-                            if isinstance(element, note.Note) and current_el.pitch.ps == element.pitch.ps:
-                                current_el.duration.quarterLength += element.duration.quarterLength
-                            elif isinstance(element, note.Rest):
-                                current_el.duration.quarterLength += element.duration.quarterLength
-                            else:
-                                new_part.append(current_el)
-                                current_el = copy.deepcopy(element)
+    # caused by quarter-note slicing. This preserves the Soprano's original rhythm
+    # while allowing inner voices to move independently every beat.
+    for p_name in parts:
+        old_part = parts[p_name]
+        new_part = stream.Part()
+        
+        # Copy non-note elements (clefs, tempo, key, etc)
+        for element in old_part:
+            if not isinstance(element, (note.Note, note.Rest)):
+                new_part.append(copy.deepcopy(element))
+                
+        current_el = None
+        for element in old_part:
+            if isinstance(element, (note.Note, note.Rest)):
+                if current_el is None:
+                    current_el = copy.deepcopy(element)
+                else:
+                    if type(current_el) == type(element):
+                        if isinstance(element, note.Note) and current_el.pitch.ps == element.pitch.ps:
+                            current_el.duration.quarterLength += element.duration.quarterLength
+                        elif isinstance(element, note.Rest):
+                            current_el.duration.quarterLength += element.duration.quarterLength
                         else:
                             new_part.append(current_el)
                             current_el = copy.deepcopy(element)
-            if current_el is not None:
-                new_part.append(current_el)
-                
-            parts[p_name] = new_part
+                    else:
+                        new_part.append(current_el)
+                        current_el = copy.deepcopy(element)
+        if current_el is not None:
+            new_part.append(current_el)
+            
+        parts[p_name] = new_part
     
     # ===== SAVE FILES =====
     unique_id = str(uuid.uuid4())[:8]
