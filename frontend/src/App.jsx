@@ -811,7 +811,18 @@ function App() {
           <button 
             onClick={() => {
               if (activeTrack.node) {
-                activeTrack.node.playing = !activeTrack.isPlaying;
+                const willPlay = !activeTrack.isPlaying;
+                activeTrack.node.playing = willPlay;
+                
+                try {
+                  if (willPlay) {
+                     if (typeof activeTrack.node.start === 'function') activeTrack.node.start();
+                  } else {
+                     if (typeof activeTrack.node.stop === 'function') activeTrack.node.stop();
+                  }
+                } catch(e) {}
+                
+                setActiveTrack(prev => ({ ...prev, isPlaying: willPlay }));
               }
             }}
             style={{
