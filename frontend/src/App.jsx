@@ -708,7 +708,7 @@ function App() {
                       )}
                     </div>
                     {results['combined_audio'] && (
-                      <audio controls src={`${API_URL}/download/${results['combined_audio']}`} data-track-title="Full SATB Mix" />
+                      <audio controls preload="none" src={`${API_URL}/download/${results['combined_audio']}`} data-track-title="Full SATB Mix" />
                     )}
                   </div>
                 </div>
@@ -738,7 +738,7 @@ function App() {
                           </div>
                         </div>
                         {audioFilename && (
-                          <audio controls src={`${API_URL}/download/${audioFilename}`} data-track-title={partLabels[part]} />
+                          <audio controls preload="none" src={`${API_URL}/download/${audioFilename}`} data-track-title={partLabels[part]} />
                         )}
                       </div>
                     );
@@ -770,7 +770,7 @@ function App() {
                           </div>
                         </div>
                         {audioFilename && (
-                          <audio controls src={`${API_URL}/download/${audioFilename}`} data-track-title={partLabels[part]} />
+                          <audio controls preload="none" src={`${API_URL}/download/${audioFilename}`} data-track-title={partLabels[part]} />
                         )}
                       </div>
                     );
