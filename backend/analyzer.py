@@ -1022,13 +1022,10 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
             # Initialize FluidSynth with the soundfont
             fs = FluidSynth(sf2_path)
             
-            # Convert only essential MIDI files to MP3 (skip individual voice parts to save CPU time)
-            # We render: combined (full score) + 4 practice tracks = 5 tracks instead of 9
+            # Convert each generated MIDI file to MP3
             audio_files = {}
-            audio_priority = {'combined', 'practice_soprano', 'practice_alto', 'practice_tenor', 'practice_bass'}
             for key_name, mid_filename in output_files.items():
                 if not mid_filename.endswith('.mid'): continue
-                if key_name not in audio_priority: continue
                 
                 mid_filepath = os.path.join(output_dir, mid_filename)
                 wav_filename = mid_filename.replace('.mid', '.wav')
