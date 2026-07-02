@@ -48,10 +48,7 @@ const SheetMusicViewer = ({ xmlUrl }) => {
         ref={containerRef} 
         style={{ 
           width: '100%',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          flexDirection: 'column'
+          minHeight: '200px'
         }} 
       />
     </div>

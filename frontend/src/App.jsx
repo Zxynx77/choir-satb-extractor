@@ -755,7 +755,7 @@ function App() {
                     const filename = results[part];
                     const audioFilename = results[part + '_audio'];
                     return (
-                      <div key={part} className="result-card result-card--practice">
+                      <div key={part} className="result-card">
                         <div className="flex items-center gap-2" style={{ marginBottom: audioFilename ? '0.75rem' : '0' }}>
                           <span className="part-label">{partLabels[part]}</span>
                           <div className="flex gap-2 ml-auto">
