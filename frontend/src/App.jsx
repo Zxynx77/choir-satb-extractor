@@ -726,9 +726,16 @@ function App() {
                       <div key={part} className="result-card">
                         <div className="flex items-center gap-2" style={{ marginBottom: audioFilename ? '0.75rem' : '0' }}>
                           <span className="part-label">{partLabels[part]}</span>
-                          <a href={`${API_URL}/download/${filename}`} className="download-icon-btn ml-auto" download title="Download">
-                            <Download size={14} />
-                          </a>
+                          <div className="flex gap-2 ml-auto">
+                            <a href={`${API_URL}/download/${filename}`} className="download-icon-btn" download title="Download MIDI">
+                              <Download size={14} /> MIDI
+                            </a>
+                            {audioFilename && (
+                              <a href={`${API_URL}/download/${audioFilename}`} className="btn btn-primary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }} download>
+                                <Download size={14} /> MP3
+                              </a>
+                            )}
+                          </div>
                         </div>
                         {audioFilename && (
                           <audio controls src={`${API_URL}/download/${audioFilename}`} data-track-title={partLabels[part]} />
@@ -751,9 +758,16 @@ function App() {
                       <div key={part} className="result-card result-card--practice">
                         <div className="flex items-center gap-2" style={{ marginBottom: audioFilename ? '0.75rem' : '0' }}>
                           <span className="part-label">{partLabels[part]}</span>
-                          <a href={`${API_URL}/download/${filename}`} className="download-icon-btn ml-auto" download title="Download">
-                            <Download size={14} />
-                          </a>
+                          <div className="flex gap-2 ml-auto">
+                            <a href={`${API_URL}/download/${filename}`} className="download-icon-btn" download title="Download MIDI">
+                              <Download size={14} /> MIDI
+                            </a>
+                            {audioFilename && (
+                              <a href={`${API_URL}/download/${audioFilename}`} className="btn btn-primary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }} download>
+                                <Download size={14} /> MP3
+                              </a>
+                            )}
+                          </div>
                         </div>
                         {audioFilename && (
                           <audio controls src={`${API_URL}/download/${audioFilename}`} data-track-title={partLabels[part]} />
