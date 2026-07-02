@@ -130,7 +130,15 @@ async def analyze_midi(
 async def download_file(filename: str):
     file_path = os.path.join(TEMP_DIR, filename)
     if os.path.exists(file_path):
-        return FileResponse(file_path, media_type="audio/midi", filename=filename)
+        media_type = "application/octet-stream"
+        if filename.endswith(".mid") or filename.endswith(".midi"):
+            media_type = "audio/midi"
+        elif filename.endswith(".mp3"):
+            media_type = "audio/mpeg"
+        elif filename.endswith(".xml") or filename.endswith(".musicxml"):
+            media_type = "application/xml"
+            
+        return FileResponse(file_path, media_type=media_type, filename=filename)
     return JSONResponse(status_code=404, content={"message": "File not found."})
 
 if __name__ == "__main__":
