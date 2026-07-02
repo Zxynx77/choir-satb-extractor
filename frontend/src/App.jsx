@@ -693,55 +693,45 @@ function App() {
             <div className="results-container">
               {/* 1. Full Arrangement Section */}
               {results['combined'] && (
-                <div className="mb-8">
-                  <h3 className="mb-4 text-gradient flex items-center gap-2"><Music size={20} /> Full Arrangement</h3>
-                  <div className="glass-panel" style={{ padding: '1.2rem', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)' }}>
-                    <div className="flex gap-2 items-center mb-3">
-                      <span style={{ fontWeight: '600', color: '#fff', fontSize: '1.1rem' }}>Full SATB Score</span>
-                      <a href={`${API_URL}/download/${results['combined']}`} className="btn ml-auto" download>
-                        <Download size={16} style={{ display: 'inline', marginRight: '6px' }} /> MIDI
+                <div>
+                  <h3 className="text-gradient flex items-center gap-2"><Music size={20} /> Full Arrangement</h3>
+                  <div className="result-card result-card--full">
+                    <div className="flex gap-2 items-center" style={{ marginBottom: '1rem' }}>
+                      <span className="part-label">🎶 Full SATB Score</span>
+                      <a href={`${API_URL}/download/${results['combined']}`} className="download-icon-btn ml-auto" download title="Download MIDI">
+                        <Download size={15} /> MIDI
                       </a>
                       {results['combined_audio'] && (
-                         <a href={`${API_URL}/download/${results['combined_audio']}`} className="btn btn-primary" download>
-                           <Download size={16} style={{ display: 'inline', marginRight: '6px' }} /> MP3 Audio
+                         <a href={`${API_URL}/download/${results['combined_audio']}`} className="btn btn-primary" style={{ padding: '0.45rem 1rem', fontSize: '0.85rem' }} download>
+                           <Download size={15} /> MP3
                          </a>
                       )}
                     </div>
                     {results['combined_audio'] && (
-                      <audio 
-                        controls 
-                        src={`${API_URL}/download/${results['combined_audio']}`} 
-                        data-track-title="Full SATB Mix"
-                        style={{ width: '100%', outline: 'none', filter: 'invert(1) hue-rotate(180deg) opacity(0.85)', borderRadius: '50px' }}
-                      />
+                      <audio controls src={`${API_URL}/download/${results['combined_audio']}`} data-track-title="Full SATB Mix" />
                     )}
                   </div>
                 </div>
               )}
 
               {/* 2. Individual Voices Section */}
-              <div className="mb-8">
-                <h3 className="mb-4 text-gradient flex items-center gap-2"><Music size={20} /> Individual Voices</h3>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem' }}>
+              <div>
+                <h3 className="text-gradient flex items-center gap-2"><Music size={20} /> Individual Voices</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '0.8rem' }}>
                   {['Soprano', 'Alto', 'Tenor', 'Bass'].map(part => {
                     if (!results[part]) return null;
                     const filename = results[part];
                     const audioFilename = results[part + '_audio'];
                     return (
-                      <div key={part} className="glass-panel flex flex-col" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                        <div className="flex items-center gap-2 mb-3">
-                          <span style={{ fontWeight: '600', color: '#fff' }}>{partLabels[part]}</span>
-                          <a href={`${API_URL}/download/${filename}`} className="btn ml-auto" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }} download>
-                            <Download size={14} style={{ display: 'inline' }} />
+                      <div key={part} className="result-card">
+                        <div className="flex items-center gap-2" style={{ marginBottom: audioFilename ? '0.75rem' : '0' }}>
+                          <span className="part-label">{partLabels[part]}</span>
+                          <a href={`${API_URL}/download/${filename}`} className="download-icon-btn ml-auto" download title="Download">
+                            <Download size={14} />
                           </a>
                         </div>
                         {audioFilename && (
-                          <audio 
-                            controls 
-                            src={`${API_URL}/download/${audioFilename}`} 
-                            data-track-title={partLabels[part]}
-                            style={{ width: '100%', outline: 'none', filter: 'invert(1) hue-rotate(180deg) opacity(0.85)', borderRadius: '50px' }}
-                          />
+                          <audio controls src={`${API_URL}/download/${audioFilename}`} data-track-title={partLabels[part]} />
                         )}
                       </div>
                     );
@@ -750,28 +740,23 @@ function App() {
               </div>
 
               {/* 3. Practice Tracks Section */}
-              <div className="mb-8">
-                <h3 className="mb-4 text-gradient flex items-center gap-2"><Headphones size={20} /> Part-Predominant Practice Tracks</h3>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem' }}>
+              <div>
+                <h3 className="text-gradient flex items-center gap-2"><Headphones size={20} /> Practice Tracks</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '0.8rem' }}>
                   {['practice_soprano', 'practice_alto', 'practice_tenor', 'practice_bass'].map(part => {
                     if (!results[part]) return null;
                     const filename = results[part];
                     const audioFilename = results[part + '_audio'];
                     return (
-                      <div key={part} className="glass-panel flex flex-col" style={{ padding: '1rem', background: 'rgba(217, 70, 239, 0.05)', borderRadius: '12px', border: '1px solid rgba(217, 70, 239, 0.15)' }}>
-                        <div className="flex items-center gap-2 mb-3">
-                          <span style={{ fontWeight: '600', color: '#fff' }}>{partLabels[part]}</span>
-                          <a href={`${API_URL}/download/${filename}`} className="btn ml-auto" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }} download>
-                            <Download size={14} style={{ display: 'inline' }} />
+                      <div key={part} className="result-card result-card--practice">
+                        <div className="flex items-center gap-2" style={{ marginBottom: audioFilename ? '0.75rem' : '0' }}>
+                          <span className="part-label">{partLabels[part]}</span>
+                          <a href={`${API_URL}/download/${filename}`} className="download-icon-btn ml-auto" download title="Download">
+                            <Download size={14} />
                           </a>
                         </div>
                         {audioFilename && (
-                          <audio 
-                            controls 
-                            src={`${API_URL}/download/${audioFilename}`} 
-                            data-track-title={partLabels[part]}
-                            style={{ width: '100%', outline: 'none', filter: 'invert(1) hue-rotate(180deg) opacity(0.85)', borderRadius: '50px' }}
-                          />
+                          <audio controls src={`${API_URL}/download/${audioFilename}`} data-track-title={partLabels[part]} />
                         )}
                       </div>
                     );
