@@ -1019,8 +1019,8 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
                         print(f"Warning: Failed to download soundfont: {e}")
                         raise Exception("Soundfont download failed. Audio rendering aborted.")
             
-            # Initialize FluidSynth with the soundfont
-            fs = FluidSynth(sf2_path)
+            # Initialize FluidSynth with the soundfont and a lower sample rate to double rendering speed
+            fs = FluidSynth(sf2_path, sample_rate=22050)
             
             # Convert each generated MIDI file to MP3
             audio_files = {}
