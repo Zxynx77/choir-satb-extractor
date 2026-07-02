@@ -317,12 +317,11 @@ def generate_voicings_for_chord(chord_info, fixed_parts, ranges, scale_key=None,
                         elif total_span < 7:
                             penalty += 5
                     else:  # wide/traditional/advanced
-                        # Reward bass in lower register
-                        bass_mid = (ranges['Bass'][0] + ranges['Bass'][1]) / 2
-                        if b < bass_mid:
-                            penalty -= 2
-                        elif b > bass_mid + 6:
-                            penalty += 3
+                        # Keep bass in comfortable reading/singing register (G2 to G3 is sweet spot)
+                        if b < 43:  # Below G2 (bottom line of bass staff)
+                            penalty += 5
+                        elif b > 55:  # Above G3
+                            penalty += 2
                         if 18 <= total_span <= 30:
                             penalty -= 2
                         elif total_span < 12:
