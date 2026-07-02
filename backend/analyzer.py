@@ -1021,32 +1021,41 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
             # Initialize FluidSynth with the soundfont and a lower sample rate to double rendering speed
             fs = FluidSynth(sf2_path, sample_rate=22050)
             
-            # Convert each generated MIDI file to MP3
+            # Convert all MIDI files to MP3 in PARALLEL using all available CPU cores
             audio_files = {}
-            for key_name, mid_filename in output_files.items():
-                if not mid_filename.endswith('.mid'): continue
-                
+            import concurrent.futures
+            
+            def render_one_track(args):
+                key_name, mid_filename = args
+                if not mid_filename.endswith('.mid'):
+                    return key_name, None
                 mid_filepath = os.path.join(output_dir, mid_filename)
                 wav_filename = mid_filename.replace('.mid', '.wav')
                 wav_filepath = os.path.join(output_dir, wav_filename)
                 mp3_filename = mid_filename.replace('.mid', '.mp3')
                 mp3_filepath = os.path.join(output_dir, mp3_filename)
                 
-                # 1. Convert MIDI to WAV using FluidSynth
-                fs.midi_to_audio(mid_filepath, wav_filepath)
+                # Each worker gets its own FluidSynth instance
+                track_fs = FluidSynth(sf2_path, sample_rate=22050)
+                track_fs.midi_to_audio(mid_filepath, wav_filepath)
                 
-                # 2. Convert WAV to MP3 using Pydub (if ffmpeg is available)
                 try:
                     audio = AudioSegment.from_wav(wav_filepath)
-                    # Use a fast +15dB scalar boost instead of normalize to save CPU on Render Free Tier
                     audio = audio + 15
                     audio.export(mp3_filepath, format="mp3", bitrate="64k")
-                    audio_files[key_name + "_audio"] = mp3_filename
-                    # Clean up the large WAV file
                     os.remove(wav_filepath)
+                    return key_name + "_audio", mp3_filename
                 except Exception as mp3_e:
-                    print(f"MP3 conversion failed (ffmpeg missing?), falling back to WAV: {mp3_e}")
-                    audio_files[key_name + "_audio"] = wav_filename
+                    print(f"MP3 conversion failed: {mp3_e}")
+                    return key_name + "_audio", wav_filename
+            
+            midi_items = [(k, v) for k, v in output_files.items() if v.endswith('.mid')]
+            with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+                results_list = list(executor.map(render_one_track, midi_items))
+            
+            for result_key, result_val in results_list:
+                if result_val:
+                    audio_files[result_key] = result_val
             
             # Merge audio files into output_files
             output_files.update(audio_files)
