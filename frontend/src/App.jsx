@@ -698,7 +698,7 @@ function App() {
                   <div className="result-card result-card--full">
                     <div className="flex gap-2 items-center" style={{ marginBottom: '1rem' }}>
                       <span className="part-label">🎶 Full SATB Score</span>
-                      <a href={`${API_URL}/download/${results['combined']}`} className="download-icon-btn ml-auto" download title="Download MIDI">
+                      <a href={`${API_URL}/download/${results['combined']}`} className="btn btn-primary ml-auto" style={{ padding: '0.45rem 1rem', fontSize: '0.85rem' }} download title="Download MIDI">
                         <Download size={15} /> MIDI
                       </a>
                       {results['combined_audio'] && (
@@ -727,7 +727,7 @@ function App() {
                         <div className="flex items-center gap-2" style={{ marginBottom: audioFilename ? '0.75rem' : '0' }}>
                           <span className="part-label">{partLabels[part]}</span>
                           <div className="flex gap-2 ml-auto">
-                            <a href={`${API_URL}/download/${filename}`} className="download-icon-btn" download title="Download MIDI">
+                            <a href={`${API_URL}/download/${filename}`} className="btn btn-primary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }} download title="Download MIDI">
                               <Download size={14} /> MIDI
                             </a>
                             {audioFilename && (
@@ -759,7 +759,7 @@ function App() {
                         <div className="flex items-center gap-2" style={{ marginBottom: audioFilename ? '0.75rem' : '0' }}>
                           <span className="part-label">{partLabels[part]}</span>
                           <div className="flex gap-2 ml-auto">
-                            <a href={`${API_URL}/download/${filename}`} className="download-icon-btn" download title="Download MIDI">
+                            <a href={`${API_URL}/download/${filename}`} className="btn btn-primary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }} download title="Download MIDI">
                               <Download size={14} /> MIDI
                             </a>
                             {audioFilename && (
