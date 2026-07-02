@@ -7,8 +7,8 @@ import './index.css';
 const ACCEPTED_EXTENSIONS = ['.mid', '.midi', '.musicxml', '.xml', '.mxl', '.png', '.jpg', '.jpeg', '.bmp', '.tiff', '.pdf'];
 const ACCEPT_STRING = '.mid,.midi,.musicxml,.xml,.mxl,.png,.jpg,.jpeg,.bmp,.tiff,.tif,.pdf';
 
-// Use environment variable for production API, default to new Render backend
-const API_URL = import.meta.env.VITE_API_URL || 'https://choir-satb-extractor.onrender.com';
+// Use environment variable for production API, default to new Hugging Face backend
+const API_URL = import.meta.env.VITE_API_URL || 'https://zxynx-choir-backend.hf.space';
 
 function getFileType(filename) {
   const ext = filename.substring(filename.lastIndexOf('.')).toLowerCase();
