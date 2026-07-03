@@ -1075,6 +1075,16 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
     try:
         satb_score = satb_score.makeMeasures()
         satb_score.makeAccidentals(useKeySignature=True, overrideStatus=True)
+        
+        # music21's makeAccidentals has a known bug where it occasionally hallucinates 
+        # cautionary natural signs on perfectly diatonic notes (especially when notes are initialized from floats).
+        # We manually sweep through and force-hide naturals on diatonic pitch classes to fix this visual artifact.
+        scale_pcs = get_scale_pitches(detected_key)
+        for p in satb_score.parts:
+            for n in p.recurse().notes:
+                if n.pitch.accidental and n.pitch.accidental.name == 'natural':
+                    if n.pitch.pitchClass in scale_pcs:
+                        n.pitch.accidental.displayStatus = False
     except Exception as e:
         print(f"Error structuring measures and accidentals: {e}")
     
