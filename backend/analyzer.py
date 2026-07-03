@@ -728,10 +728,7 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
     print(f"Harmonizing melody: {input_path}")
     score = converter.parse(input_path)
     
-    # Key detection priority:
-    # 1. Manual override from user
-    # 2. Key signature embedded in the input file (trust the composer)
-    # 3. Auto-detection as last resort
+    # Key detection: use manual override if provided, otherwise auto-detect
     if key_override and key_override.strip():
         try:
             detected_key = key.Key(key_override.strip())
@@ -741,33 +738,8 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
             detected_key = get_key_of_score(score)
             print(f"Auto-detected key: {detected_key}")
     else:
-        # Check if the input file has an embedded key signature
-        # IMPORTANT: Check KeySignature FIRST because music21 auto-inserts a
-        # default Key('C major') when parsing MIDI, which would give a false match.
-        embedded_key = None
-        for el in score.recurse():
-            if isinstance(el, key.KeySignature) and not isinstance(el, key.Key):
-                # This is an explicit key signature from the file (e.g., 4 sharps)
-                embedded_key = el.asKey('major')
-                print(f"Found embedded KeySignature: {el.sharps} sharps -> {embedded_key}")
-                break
-        
-        # Only check for Key objects if no KeySignature was found
-        if embedded_key is None:
-            for el in score.recurse():
-                if isinstance(el, key.Key):
-                    # Skip default C major that music21 auto-inserts
-                    if el.sharps != 0 or el.mode != 'major':
-                        embedded_key = el
-                        print(f"Found embedded Key: {embedded_key}")
-                        break
-        
-        if embedded_key:
-            detected_key = embedded_key
-            print(f"Using embedded key from input file: {detected_key}")
-        else:
-            detected_key = get_key_of_score(score)
-            print(f"Auto-detected key: {detected_key}")
+        detected_key = get_key_of_score(score)
+        print(f"Auto-detected key: {detected_key}")
     
     # Convert ranges
     ranges = {
@@ -1004,9 +976,11 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
             for p in parts.values():
                 p.insert(0, copy.deepcopy(el))
             break  # Only need first time signature
-    # Apply key signature from the detected key (which respects input file's key when available)
-    for p in parts.values():
-        p.insert(0, key.KeySignature(detected_key.sharps))
+    for el in score.recurse():
+        if isinstance(el, key.KeySignature):
+            for p in parts.values():
+                p.insert(0, copy.deepcopy(el))
+            break
     if not tempo_bpm:
         for el in score.recurse():
             if isinstance(el, tempo.MetronomeMark):
