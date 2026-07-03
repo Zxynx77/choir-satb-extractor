@@ -742,15 +742,25 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
             print(f"Auto-detected key: {detected_key}")
     else:
         # Check if the input file has an embedded key signature
+        # IMPORTANT: Check KeySignature FIRST because music21 auto-inserts a
+        # default Key('C major') when parsing MIDI, which would give a false match.
         embedded_key = None
         for el in score.recurse():
-            if isinstance(el, key.Key):
-                embedded_key = el
-                break
-            elif isinstance(el, key.KeySignature):
-                # Convert KeySignature to Key (assumes major by default)
+            if isinstance(el, key.KeySignature) and not isinstance(el, key.Key):
+                # This is an explicit key signature from the file (e.g., 4 sharps)
                 embedded_key = el.asKey('major')
+                print(f"Found embedded KeySignature: {el.sharps} sharps -> {embedded_key}")
                 break
+        
+        # Only check for Key objects if no KeySignature was found
+        if embedded_key is None:
+            for el in score.recurse():
+                if isinstance(el, key.Key):
+                    # Skip default C major that music21 auto-inserts
+                    if el.sharps != 0 or el.mode != 'major':
+                        embedded_key = el
+                        print(f"Found embedded Key: {embedded_key}")
+                        break
         
         if embedded_key:
             detected_key = embedded_key
