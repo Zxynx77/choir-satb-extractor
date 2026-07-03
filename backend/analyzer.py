@@ -703,7 +703,10 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
     print(f"Harmonizing melody: {input_path}")
     score = converter.parse(input_path)
     
-    # Key detection: use manual override if provided, otherwise auto-detect
+    # Key detection priority:
+    # 1. Manual override from user
+    # 2. Key signature embedded in the input file (trust the composer)
+    # 3. Auto-detection as last resort
     if key_override and key_override.strip():
         try:
             detected_key = key.Key(key_override.strip())
@@ -713,8 +716,23 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
             detected_key = get_key_of_score(score)
             print(f"Auto-detected key: {detected_key}")
     else:
-        detected_key = get_key_of_score(score)
-        print(f"Auto-detected key: {detected_key}")
+        # Check if the input file has an embedded key signature
+        embedded_key = None
+        for el in score.recurse():
+            if isinstance(el, key.Key):
+                embedded_key = el
+                break
+            elif isinstance(el, key.KeySignature):
+                # Convert KeySignature to Key (assumes major by default)
+                embedded_key = el.asKey('major')
+                break
+        
+        if embedded_key:
+            detected_key = embedded_key
+            print(f"Using embedded key from input file: {detected_key}")
+        else:
+            detected_key = get_key_of_score(score)
+            print(f"Auto-detected key: {detected_key}")
     
     # Convert ranges
     ranges = {
@@ -951,11 +969,7 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
             for p in parts.values():
                 p.insert(0, copy.deepcopy(el))
             break  # Only need first time signature
-    for el in score.recurse():
-        if isinstance(el, key.KeySignature):
-            break
-    # Use the DETECTED key for the output key signature (not the input file's key)
-    # This ensures the key signature matches the chords the algorithm actually selected
+    # Apply key signature from the detected key (which respects input file's key when available)
     for p in parts.values():
         p.insert(0, key.KeySignature(detected_key.sharps))
     if not tempo_bpm:
