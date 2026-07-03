@@ -781,7 +781,19 @@ function App() {
             
             {results['musicxml'] && (
               <div className="mt-8">
-                <h3 className="mb-4 text-gradient flex items-center gap-2"><FileText size={20} /> Live Sheet Music Preview</h3>
+                <div className="flex items-center gap-4 mb-4">
+                  <h3 className="text-gradient flex items-center gap-2 m-0"><FileText size={20} /> Live Sheet Music Preview</h3>
+                  <div className="flex gap-2 ml-auto">
+                    <a href={`${API_URL}/download/${results['musicxml']}`} className="btn btn-primary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }} download title="Download MusicXML">
+                      <Download size={14} /> MusicXML
+                    </a>
+                    {results['pdf'] && (
+                      <a href={`${API_URL}/download/${results['pdf']}`} className="btn btn-primary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }} download title="Download PDF">
+                        <Download size={14} /> PDF
+                      </a>
+                    )}
+                  </div>
+                </div>
                 <SheetMusicViewer xmlUrl={`${API_URL}/download/${results['musicxml']}`} />
               </div>
             )}
