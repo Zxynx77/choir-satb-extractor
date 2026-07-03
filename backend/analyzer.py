@@ -976,11 +976,16 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
             for p in parts.values():
                 p.insert(0, copy.deepcopy(el))
             break  # Only need first time signature
+    # Find the real key signature from the file (skipping music21's auto-inserted default C major Key)
+    real_ks = None
     for el in score.recurse():
-        if isinstance(el, key.KeySignature):
-            for p in parts.values():
-                p.insert(0, copy.deepcopy(el))
+        if isinstance(el, key.KeySignature) and not isinstance(el, key.Key):
+            real_ks = el
             break
+    
+    if real_ks:
+        for p in parts.values():
+            p.insert(0, copy.deepcopy(real_ks))
     if not tempo_bpm:
         for el in score.recurse():
             if isinstance(el, tempo.MetronomeMark):
