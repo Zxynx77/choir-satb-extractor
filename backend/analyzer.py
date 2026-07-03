@@ -30,6 +30,21 @@ def export_midi_to_audio(midi_path, output_path, sf_path="default.sf2"):
 def get_key_of_score(score):
     try:
         detected_key = score.analyze('key')
+        
+        # Heuristic: If music21 detected a minor key, check the final note of the melody.
+        # If the final note matches the tonic of the relative major, it's almost certainly the relative major.
+        if detected_key.mode == 'minor':
+            last_note = None
+            for n in score.flatten().notes:
+                if n.isNote:
+                    last_note = n
+                elif n.isChord:
+                    last_note = n.notes[0] # Just grab the top note if it's a chord
+            
+            if last_note and last_note.pitch.step == detected_key.relative.tonic.step:
+                print(f"Heuristic override: changing {detected_key} to {detected_key.relative} based on final note {last_note.pitch.name}")
+                return detected_key.relative
+                
         return detected_key
     except Exception as e:
         print(f"Key analysis failed: {e}. Defaulting to C major.")
