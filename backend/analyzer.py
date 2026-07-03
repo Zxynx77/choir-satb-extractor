@@ -1070,6 +1070,15 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
             for existing_clef in p.recurse().getElementsByClass('Clef'):
                 p.remove(existing_clef)
             p.insert(0, clef.Treble8vbClef())
+            
+    # Force clean accidentals: explicitly hide hallucinated natural signs on diatonic notes
+    scale_pcs = get_scale_pitches(detected_key)
+    for p in satb_score.parts:
+        for n in p.recurse().notes:
+            if n.pitch.accidental and n.pitch.accidental.name == 'natural':
+                # If the note belongs to the diatonic scale, it doesn't need a natural sign
+                if n.pitch.pitchClass in scale_pcs:
+                    n.pitch.accidental.displayStatus = False
     
     # MusicXML export
     musicxml_filename = f"satb_score_{unique_id}.musicxml"
