@@ -317,11 +317,33 @@ def generate_voicings_for_chord(chord_info, fixed_parts, ranges, scale_key=None,
                         elif total_span < 7:
                             penalty += 5
                     else:  # wide/traditional/advanced
-                        # Keep bass in comfortable reading/singing register (G2 to G3 is sweet spot)
+                        # 1. Bass: Keep bass in comfortable reading/singing register (G2 to G3 is sweet spot)
                         if b < 43:  # Below G2 (bottom line of bass staff)
                             penalty += 5
                         elif b > 55:  # Above G3
                             penalty += 2
+                        
+                        # 2. Alto: Prefer C4-A4 (60 to 69)
+                        if a < 60:
+                            penalty += 4  # Avoid dropping below C4
+                        elif a > 69:
+                            penalty += 2
+                        
+                        # 3. Tenor: Prefer E3-E4 (52 to 64)
+                        if t < 52:
+                            penalty += 5  # Strong penalty for dropping below E3 (too muddy)
+                        elif t >= 60:
+                            penalty -= 2  # Reward keeping Tenor above Middle C when possible
+                            
+                        # 4. Alto-Soprano Proximity
+                        # Prefer Alto to remain within a 3rd to 6th below Soprano (3 to 9 semitones)
+                        if 3 <= sa_gap <= 9:
+                            penalty -= 3
+                            
+                        # 5. Avoid Tenor doubling the Bass
+                        if t % 12 == b % 12:
+                            penalty += 8  # Tenor should function as independent melodic voice
+                            
                         if 18 <= total_span <= 30:
                             penalty -= 2
                         elif total_span < 12:
@@ -567,6 +589,21 @@ def transition_cost(prev_voicing, prev_chord, curr_voicing, curr_chord, next_mel
             # Check if it's actually an augmented 2nd (not minor 3rd)
             # In minor keys, moving between b6 and #7 creates augmented 2nd
             cost += 8
+            
+    # 6.5 === CONTRARY MOTION PREFERENCES ===
+    dirs = []
+    for i in range(4):
+        if curr_voicing[i] > prev_voicing[i]: dirs.append(1)
+        elif curr_voicing[i] < prev_voicing[i]: dirs.append(-1)
+        else: dirs.append(0)
+        
+    # Penalize block-chord writing (all 4 voices moving in the exact same direction)
+    if all(d == 1 for d in dirs) or all(d == -1 for d in dirs):
+        cost += 15
+        
+    # Reward contrary motion between outer voices (Soprano and Bass)
+    if dirs[0] != 0 and dirs[3] != 0 and dirs[0] != dirs[3]:
+        cost -= 4
     
     # 7. Root motion preferences (favor functional progressions in traditional style)
     root_motion = abs(curr_chord['root_pc'] - prev_chord['root_pc'])
