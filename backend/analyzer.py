@@ -322,6 +322,32 @@ def generate_voicings_for_chord(chord_info, fixed_parts, ranges, scale_key=None,
                     else:  # Above C4 — bass in treble clef is WRONG
                         penalty += 100
                     
+                    # === UNIVERSAL: Alto tessitura (ALL styles) ===
+                    if a < 60:  # Below C4
+                        penalty += 10
+                    elif 60 <= a <= 69:  # Sweet spot C4-A4
+                        penalty -= 3
+                    elif a > 69:
+                        penalty += 2
+                    
+                    # === UNIVERSAL: Tenor tessitura (ALL styles) ===
+                    if t < 52:  # Below E3 (too muddy)
+                        penalty += 10
+                    elif 52 <= t <= 64:  # Sweet spot E3-E4
+                        penalty -= 2
+                    # Note: no extra stacking reward for above Middle C
+                    
+                    # === UNIVERSAL: Alto-Soprano Proximity ===
+                    if 3 <= sa_gap <= 9:
+                        penalty -= 3
+                    elif sa_gap > 14:
+                        penalty += 5  # Alto is too far from Soprano
+                    
+                    # === UNIVERSAL: Avoid Tenor doubling the Bass ===
+                    if t % 12 == b % 12 and t != b:
+                        penalty += 8  # Tenor should be independent
+                    
+                    # Harmony style spread preference
                     if harmony_style == 'close':
                         if 12 <= total_span <= 19:
                             penalty -= 3
@@ -330,33 +356,6 @@ def generate_voicings_for_chord(chord_info, fixed_parts, ranges, scale_key=None,
                         elif total_span < 7:
                             penalty += 5
                     else:  # wide/traditional/advanced
-                        # 2. Alto: Prefer C4-A4 (60 to 69)
-                        if a < 60:
-                            penalty += 15  # Strong: avoid dropping below C4
-                        elif 60 <= a <= 69:  # Sweet spot C4-A4
-                            penalty -= 5  # Reward being in the bright register
-                        elif a > 69:
-                            penalty += 2
-                        
-                        # 3. Tenor: Prefer E3-E4 (52 to 64)
-                        if t < 52:
-                            penalty += 15  # Strong: avoid dropping below E3 (too muddy)
-                        elif 52 <= t <= 64:  # Sweet spot E3-E4
-                            penalty -= 3
-                        if t >= 60:
-                            penalty -= 5  # Strong reward for Tenor above Middle C (Bach style)
-                            
-                        # 4. Alto-Soprano Proximity
-                        # Prefer Alto to remain within a 3rd to 6th below Soprano (3 to 9 semitones)
-                        if 3 <= sa_gap <= 9:
-                            penalty -= 5
-                        elif sa_gap > 12:
-                            penalty += 8  # Alto is too far from Soprano
-                            
-                        # 5. Avoid Tenor doubling the Bass
-                        if t % 12 == b % 12:
-                            penalty += 12  # Tenor should function as independent melodic voice
-                            
                         if 18 <= total_span <= 30:
                             penalty -= 2
                         elif total_span < 12:
@@ -606,19 +605,24 @@ def transition_cost(prev_voicing, prev_chord, curr_voicing, curr_chord, next_mel
             cost += 8
             
     # 6.5 === CONTRARY MOTION PREFERENCES ===
-    dirs = []
-    for i in range(4):
-        if curr_voicing[i] > prev_voicing[i]: dirs.append(1)
-        elif curr_voicing[i] < prev_voicing[i]: dirs.append(-1)
-        else: dirs.append(0)
+    # Only evaluate the 3 generated voices (Alto=1, Tenor=2, Bass=3)
+    # Soprano (0) is fixed/locked, so don't penalize based on its direction
+    gen_dirs = []
+    for i in [1, 2, 3]:  # Alto, Tenor, Bass only
+        if curr_voicing[i] > prev_voicing[i]: gen_dirs.append(1)
+        elif curr_voicing[i] < prev_voicing[i]: gen_dirs.append(-1)
+        else: gen_dirs.append(0)
         
-    # Penalize block-chord writing (all 4 voices moving in the exact same direction)
-    if all(d == 1 for d in dirs) or all(d == -1 for d in dirs):
-        cost += 15
+    # Penalize block-chord writing (all 3 generated voices moving same direction)
+    if all(d == 1 for d in gen_dirs if d != 0) and sum(1 for d in gen_dirs if d != 0) >= 3:
+        cost += 8
         
-    # Reward contrary motion between outer voices (Soprano and Bass)
-    if dirs[0] != 0 and dirs[3] != 0 and dirs[0] != dirs[3]:
-        cost -= 4
+    # Reward contrary motion between Soprano (fixed) and Bass (generated)
+    s_motion = curr_voicing[0] - prev_voicing[0]
+    b_motion = curr_voicing[3] - prev_voicing[3]
+    if s_motion != 0 and b_motion != 0:
+        if (s_motion > 0 and b_motion < 0) or (s_motion < 0 and b_motion > 0):
+            cost -= 3  # Reward contrary motion
     
     # 7. Root motion preferences (favor functional progressions in traditional style)
     root_motion = abs(curr_chord['root_pc'] - prev_chord['root_pc'])
