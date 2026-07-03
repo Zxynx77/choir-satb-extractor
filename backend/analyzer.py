@@ -1089,7 +1089,8 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
     # Structure measures and clean up ALL redundant accidentals (sharps/flats/naturals) properly
     try:
         satb_score = satb_score.makeMeasures()
-        satb_score.makeAccidentals(useKeySignature=True, overrideStatus=True)
+        for p in satb_score.parts:
+            p.makeAccidentals(overrideStatus=True, inPlace=True)
         
         # music21's makeAccidentals has a known bug where it occasionally hallucinates 
         # cautionary natural signs on perfectly diatonic notes (especially when notes are initialized from floats).
