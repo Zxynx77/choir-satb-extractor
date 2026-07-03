@@ -956,7 +956,6 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
             break
     # Use the DETECTED key for the output key signature (not the input file's key)
     # This ensures the key signature matches the chords the algorithm actually selected
-    detected_ks = detected_key.getScale().deriveRanking()[0] if detected_key else None
     for p in parts.values():
         p.insert(0, key.KeySignature(detected_key.sharps))
     if not tempo_bpm:
