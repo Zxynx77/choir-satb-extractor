@@ -633,6 +633,31 @@ def transition_cost(prev_voicing, prev_chord, curr_voicing, curr_chord, next_mel
         if (s_motion > 0 and b_motion < 0) or (s_motion < 0 and b_motion > 0):
             cost -= 3  # Reward contrary motion
     
+    # 6.6 === ALTO-TENOR INDEPENDENCE ===
+    # This is the key rule that prevents Alto and Tenor from being "the same melody shifted down"
+    a_motion = curr_voicing[1] - prev_voicing[1]  # Alto movement
+    t_motion = curr_voicing[2] - prev_voicing[2]  # Tenor movement
+    
+    if a_motion != 0 and t_motion != 0:
+        # Both voices are moving
+        same_dir = (a_motion > 0 and t_motion > 0) or (a_motion < 0 and t_motion < 0)
+        
+        if same_dir:
+            # Moving same direction by same interval = strict parallel (sounds identical)
+            if abs(a_motion) == abs(t_motion):
+                cost += 20  # Heavy penalty for strict parallel motion
+            # Moving same direction by similar interval = similar motion (still too similar)
+            elif abs(abs(a_motion) - abs(t_motion)) <= 1:
+                cost += 10  # Moderate penalty
+            else:
+                cost += 3   # Mild penalty for same direction but different intervals
+        else:
+            # Contrary motion between Alto and Tenor = independent voices!
+            cost -= 5  # Strong reward
+    elif (a_motion != 0) != (t_motion != 0):
+        # One moves while the other stays = oblique motion (good independence)
+        cost -= 3
+    
     # 7. Root motion preferences (favor functional progressions in traditional style)
     root_motion = abs(curr_chord['root_pc'] - prev_chord['root_pc'])
     root_motion = min(root_motion, 12 - root_motion)
