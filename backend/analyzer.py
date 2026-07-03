@@ -309,6 +309,19 @@ def generate_voicings_for_chord(chord_info, fixed_parts, ranges, scale_key=None,
                     
                     # Harmony style spread preference
                     total_span = s - b
+                    
+                    # === UNIVERSAL: Bass must stay in bass clef (ALL styles) ===
+                    if b < 43:  # Below G2 (too many ledger lines)
+                        penalty += 10
+                    elif 43 <= b <= 55:  # Sweet spot G2-G3
+                        penalty -= 3
+                    elif b <= 57:  # A3 — top of bass staff, acceptable
+                        penalty += 5
+                    elif b <= 60:  # Up to C4 — entering treble territory
+                        penalty += 25
+                    else:  # Above C4 — bass in treble clef is WRONG
+                        penalty += 100
+                    
                     if harmony_style == 'close':
                         if 12 <= total_span <= 19:
                             penalty -= 3
@@ -317,14 +330,6 @@ def generate_voicings_for_chord(chord_info, fixed_parts, ranges, scale_key=None,
                         elif total_span < 7:
                             penalty += 5
                     else:  # wide/traditional/advanced
-                        # 1. Bass: Keep bass in comfortable reading/singing register (G2 to G3 is sweet spot)
-                        if b < 43:  # Below G2 (bottom line of bass staff)
-                            penalty += 8
-                        elif 43 <= b <= 55:  # Sweet spot G2-G3
-                            penalty -= 3
-                        elif b > 55:  # Above G3
-                            penalty += 2
-                        
                         # 2. Alto: Prefer C4-A4 (60 to 69)
                         if a < 60:
                             penalty += 15  # Strong: avoid dropping below C4
