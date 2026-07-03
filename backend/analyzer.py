@@ -319,30 +319,38 @@ def generate_voicings_for_chord(chord_info, fixed_parts, ranges, scale_key=None,
                     else:  # wide/traditional/advanced
                         # 1. Bass: Keep bass in comfortable reading/singing register (G2 to G3 is sweet spot)
                         if b < 43:  # Below G2 (bottom line of bass staff)
-                            penalty += 5
+                            penalty += 8
+                        elif 43 <= b <= 55:  # Sweet spot G2-G3
+                            penalty -= 3
                         elif b > 55:  # Above G3
                             penalty += 2
                         
                         # 2. Alto: Prefer C4-A4 (60 to 69)
                         if a < 60:
-                            penalty += 4  # Avoid dropping below C4
+                            penalty += 15  # Strong: avoid dropping below C4
+                        elif 60 <= a <= 69:  # Sweet spot C4-A4
+                            penalty -= 5  # Reward being in the bright register
                         elif a > 69:
                             penalty += 2
                         
                         # 3. Tenor: Prefer E3-E4 (52 to 64)
                         if t < 52:
-                            penalty += 5  # Strong penalty for dropping below E3 (too muddy)
-                        elif t >= 60:
-                            penalty -= 2  # Reward keeping Tenor above Middle C when possible
+                            penalty += 15  # Strong: avoid dropping below E3 (too muddy)
+                        elif 52 <= t <= 64:  # Sweet spot E3-E4
+                            penalty -= 3
+                        if t >= 60:
+                            penalty -= 5  # Strong reward for Tenor above Middle C (Bach style)
                             
                         # 4. Alto-Soprano Proximity
                         # Prefer Alto to remain within a 3rd to 6th below Soprano (3 to 9 semitones)
                         if 3 <= sa_gap <= 9:
-                            penalty -= 3
+                            penalty -= 5
+                        elif sa_gap > 12:
+                            penalty += 8  # Alto is too far from Soprano
                             
                         # 5. Avoid Tenor doubling the Bass
                         if t % 12 == b % 12:
-                            penalty += 8  # Tenor should function as independent melodic voice
+                            penalty += 12  # Tenor should function as independent melodic voice
                             
                         if 18 <= total_span <= 30:
                             penalty -= 2
@@ -483,17 +491,19 @@ def transition_cost(prev_voicing, prev_chord, curr_voicing, curr_chord, next_mel
     for i in range(4):  # Soprano, Alto, Tenor, Bass
         leap = abs(curr_voicing[i] - prev_voicing[i])
         
-        if i in [1, 2]:  # Alto & Tenor: strictest stepwise constraint
+        if i in [1, 2]:  # Alto & Tenor: allow leaps to reach correct tessitura
             if leap <= 2:
                 cost -= 1  # Reward stepwise motion
             elif leap <= 4:
-                cost += 3  # Minor 3rd / Major 3rd: mild penalty
+                cost += 2  # Minor 3rd / Major 3rd: very mild
             elif leap <= 5:
-                cost += 40  # Perfect 4th: strong penalty
+                cost += 6  # Perfect 4th: acceptable leap for register correction
             elif leap <= 7:
-                cost += 200  # 5th range: very heavy
+                cost += 12  # 5th: moderate penalty, but allowed when needed
+            elif leap <= 12:
+                cost += 40  # Up to an octave: heavy but not forbidden
             else:
-                cost += 10000  # Anything larger: effectively forbidden
+                cost += 200  # Larger than octave: effectively forbidden
         elif i == 3:  # Bass: more freedom, but not unlimited
             if leap <= 2:
                 cost -= 1  # Reward stepwise bass
