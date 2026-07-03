@@ -289,13 +289,17 @@ def generate_voicings_for_chord(chord_info, fixed_parts, ranges, scale_key=None,
                     at_gap = a - t
                     tb_gap = t - b
                         
-                    if sa_gap == 0: penalty += 8
-                    if at_gap == 0: penalty += 8
-                    if tb_gap == 0: penalty += 12
+                    if sa_gap == 0: penalty += 25  # Strongly forbid Soprano-Alto unison
+                    if at_gap == 0: penalty += 30  # Strictly forbid Alto-Tenor unison
+                    if tb_gap == 0: penalty += 20  # Forbid Tenor-Bass unison
                     
-                    if 0 < sa_gap <= 2: penalty += 3
-                    if 0 < at_gap <= 2: penalty += 3
-                    if 0 < tb_gap <= 2: penalty += 6
+                    if 0 < sa_gap <= 2: penalty += 5
+                    if 0 < at_gap <= 2: penalty += 10  # Alto-Tenor within a 2nd = too close
+                    if 0 < tb_gap <= 2: penalty += 8
+                    
+                    # Reward proper Alto-Tenor separation (a 3rd to a 6th apart)
+                    if 3 <= at_gap <= 9:
+                        penalty -= 4
                     
                     # === TRADITIONAL STYLE: Heavy Major Triad Bias ===
                     if harmony_style in ['traditional', 'strict']:
@@ -318,11 +322,12 @@ def generate_voicings_for_chord(chord_info, fixed_parts, ranges, scale_key=None,
                     elif b <= 57:  # A3 — top of bass staff, acceptable
                         penalty += 5
                     elif b <= 60:  # Up to C4 — entering treble territory
-                        penalty += 25
+                        penalty += 50
                     else:  # Above C4 — bass in treble clef is WRONG
-                        penalty += 100
+                        penalty += 200
                     
                     # === UNIVERSAL: Alto tessitura (ALL styles) ===
+                    # Alto sweet spot: C4-A4 (MIDI 60-69)
                     if a < 60:  # Below C4
                         penalty += 10
                     elif 60 <= a <= 69:  # Sweet spot C4-A4
@@ -331,11 +336,15 @@ def generate_voicings_for_chord(chord_info, fixed_parts, ranges, scale_key=None,
                         penalty += 2
                     
                     # === UNIVERSAL: Tenor tessitura (ALL styles) ===
+                    # Tenor sweet spot: E3-B3 (MIDI 52-59) — NO overlap with Alto
                     if t < 52:  # Below E3 (too muddy)
                         penalty += 10
-                    elif 52 <= t <= 64:  # Sweet spot E3-E4
+                    elif 52 <= t <= 59:  # Sweet spot E3-B3
                         penalty -= 2
-                    # Note: no extra stacking reward for above Middle C
+                    elif t <= 64:  # C4-E4: acceptable but not preferred (Alto territory)
+                        penalty += 0  # Neutral — no reward, no penalty
+                    else:  # Above E4: too high for Tenor
+                        penalty += 5
                     
                     # === UNIVERSAL: Alto-Soprano Proximity ===
                     if 3 <= sa_gap <= 9:
@@ -1121,6 +1130,18 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
             print(f"Audio rendering failed: {e}")
     else:
         print("Fluidsynth not found on system. Skipping backend audio rendering.")
+    
+    # Force clefs before export (music21's makeNotation can override them)
+    for p in satb_score.parts:
+        if p.partName == 'Bass' or p.id == 'Bass':
+            # Remove any auto-inserted clefs and force BassClef
+            for existing_clef in p.recurse().getElementsByClass('Clef'):
+                p.remove(existing_clef)
+            p.insert(0, clef.BassClef())
+        elif p.partName == 'Tenor' or p.id == 'Tenor':
+            for existing_clef in p.recurse().getElementsByClass('Clef'):
+                p.remove(existing_clef)
+            p.insert(0, clef.Treble8vbClef())
     
     # MusicXML export
     musicxml_filename = f"satb_score_{unique_id}.musicxml"
