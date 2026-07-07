@@ -212,11 +212,11 @@ def generate_voicings_for_chord(chord_info, fixed_parts, ranges, scale_key=None,
                     if at_gap == 0: penalty += 30  # Strictly forbid Alto-Tenor unison
                     if tb_gap == 0: penalty += 20  # Forbid Tenor-Bass unison
                     
-                    if 0 < sa_gap <= 2: penalty += 5
-                    if 0 < at_gap <= 2: penalty += 10  # Alto-Tenor within a 2nd = too close
+                    if 0 < sa_gap <= 2: penalty += 0  # Allow Alto to rise up close to Soprano
+                    if 0 < at_gap <= 2: penalty += 4  # Reduced penalty for Alto-Tenor closeness
                     if 0 < tb_gap <= 2: penalty += 8
                     
-                    # Reward proper Alto-Tenor separation (a 3rd to a 6th apart)
+                    # Reward proper Alto-Tenor separation
                     if 3 <= at_gap <= 9:
                         penalty -= 4
                     
@@ -246,29 +246,27 @@ def generate_voicings_for_chord(chord_info, fixed_parts, ranges, scale_key=None,
                         penalty += 200
                     
                     # === UNIVERSAL: Alto tessitura (ALL styles) ===
-                    # Alto sweet spot: C4-A4 (MIDI 60-69)
-                    if a < 60:  # Below C4
+                    # Alto sweet spot: A3-E5 (MIDI 57-76)
+                    if a < 57:  # Below A3
                         penalty += 10
-                    elif 60 <= a <= 69:  # Sweet spot C4-A4
+                    elif 57 <= a <= 76:  # Sweet spot A3-E5
                         penalty -= 3
-                    elif a > 69:
+                    elif a > 76:
                         penalty += 2
                     
                     # === UNIVERSAL: Tenor tessitura (ALL styles) ===
-                    # Tenor sweet spot: E3-B3 (MIDI 52-59) — NO overlap with Alto
+                    # Tenor sweet spot: E3-G4 (MIDI 52-67)
                     if t < 52:  # Below E3 (too muddy)
                         penalty += 10
-                    elif 52 <= t <= 59:  # Sweet spot E3-B3
+                    elif 52 <= t <= 67:  # Sweet spot E3-G4
                         penalty -= 2
-                    elif t <= 64:  # C4-E4: acceptable but not preferred (Alto territory)
-                        penalty += 0  # Neutral — no reward, no penalty
-                    else:  # Above E4: too high for Tenor
+                    else:  # Above G4: too high for Tenor
                         penalty += 5
                     
                     # === UNIVERSAL: Alto-Soprano Proximity ===
-                    if 3 <= sa_gap <= 9:
+                    if 3 <= sa_gap <= 12:  # Allow up to an octave of space
                         penalty -= 3
-                    elif sa_gap > 14:
+                    elif sa_gap > 16:
                         penalty += 5  # Alto is too far from Soprano
                     
                     # === UNIVERSAL: Avoid Tenor doubling the Bass ===

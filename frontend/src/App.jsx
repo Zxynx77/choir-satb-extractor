@@ -63,7 +63,7 @@ function App() {
 
   const [ranges] = useState({
     soprano_min: 'C4', soprano_max: 'G5',
-    alto_min: 'G3', alto_max: 'C5',
+    alto_min: 'A3', alto_max: 'E5',
     tenor_min: 'C3', tenor_max: 'G4',
     bass_min: 'E2', bass_max: 'C4'
   });
