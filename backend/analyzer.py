@@ -148,15 +148,12 @@ def generate_voicings_for_chord(chord_info, fixed_parts, ranges, scale_key=None,
     
     for s in s_cands:
         for a in a_cands:
-            if s < a: continue  # No voice crossing
             if s - a > 12: continue  # Spacing: S-A within octave
             
             for t in t_cands:
-                if a < t: continue  # No voice crossing
                 if a - t > 12: continue  # Spacing: A-T within octave
                 
                 for b in b_cands:
-                    if t < b: continue  # No voice crossing
                     if t - b > 19: continue  # Spacing: T-B within P12
                     
                     voicing = (s, a, t, b)
@@ -173,7 +170,14 @@ def generate_voicings_for_chord(chord_info, fixed_parts, ranges, scale_key=None,
                         if missing and missing != {fifth_pc}:
                             continue
                     
+                    
                     penalty = 0
+                    
+                    # Voice crossing penalties (relaxed from strict bans to soft penalties)
+                    if s < a: penalty += 50
+                    if a < t: penalty += 50
+                    if t < b: penalty += 50
+                    
                     doubled = [pc for pc in set(pc_list) if pc_list.count(pc) > 1]
                     
                     # === PARTWRITER RULE: Leading tone never doubled ===
