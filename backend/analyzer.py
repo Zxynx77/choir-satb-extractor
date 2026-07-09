@@ -166,16 +166,11 @@ def generate_voicings_for_chord(chord_info, fixed_parts, ranges, scale_key=None,
                         for pc in pcs:
                             if pc != root_pc and (pc - root_pc) % 12 not in [3, 4]:
                                 fifth_pc = pc
-                        if fifth_pc and third_interval:
-                            if root_pc in voicing_pcs and third_interval in voicing_pcs:
-                                penalty = 8
-                                # Missing 5th is allowed with penalty
-                            elif not chord_info.get('is_chord_tone', True):
-                                penalty = 10 # Allow missing root/3rd on passing tones
-                            else:
-                                continue # Cannot omit root or 3rd
+                        missing = pcs - voicing_pcs
+                        if missing and missing == {fifth_pc}:
+                            penalty = 8  # Missing 5th is allowed with penalty
                         else:
-                            continue
+                            continue  # Cannot omit root or 3rd
                     else:
                         penalty = 0
                     
@@ -321,11 +316,7 @@ def check_parallels(prev_v, curr_v):
                         errors.append(f"Parallel 8ve: {names[i]}-{names[j]}")
                     elif (curr_ivl % 12 == 7 and prev_ivl % 12 == 6) or (curr_ivl % 12 == 6 and prev_ivl % 12 == 7):
                         errors.append(f"Unequal 5th (d5/P5): {names[i]}-{names[j]}")
-                elif (s_dir > 0 and l_dir < 0) or (s_dir < 0 and l_dir > 0):
-                    if curr_ivl % 12 == 7 and prev_ivl % 12 == 7:
-                        errors.append(f"Consecutive 5th (contrary): {names[i]}-{names[j]}")
-                    elif curr_ivl % 12 == 0 and prev_ivl % 12 == 0 and curr_ivl > 0:
-                        errors.append(f"Consecutive 8ve (contrary): {names[i]}-{names[j]}")
+                # Contrary motion fifths/octaves are allowed in traditional counterpoint
     return errors
 
 def decorate_chorale(parts, scale_key):
@@ -611,8 +602,9 @@ def transition_cost(prev_voicing, prev_chord, curr_voicing, curr_chord, next_mel
             cost -= 1  # Small reward for staying on the same chord
             
     # Heavily penalize changing chords on short notes (passing tones)
+    # A short note (eighth or less) should hold the previous chord
     if dur <= 0.5 and root_motion != 0:
-        cost += 100
+        cost += 500
             
     # 8. Non-Chord Tone Penalty (Contextual Passing Tone Handling)
     is_chord_tone = curr_chord.get('is_chord_tone', True)
