@@ -293,7 +293,7 @@ def generate_voicings_for_chord(chord_info, fixed_parts, ranges, scale_key=None,
                     
                     voicings.append((voicing, chord_info, penalty))
     voicings.sort(key=lambda x: x[2])
-    return voicings[:400]
+    return voicings[:100]
 
 def check_parallels(prev_v, curr_v):
     """Check for parallel 5ths and octaves between two voicings."""
