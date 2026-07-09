@@ -91,12 +91,18 @@ async def analyze_midi(
         
         # If it's a PDF, convert first page to an image, then run OMR
         if ext in SUPPORTED_DOC_FORMATS:
-            from pdf2image import convert_from_path
-            pages = convert_from_path(input_path, dpi=300, first_page=1, last_page=1)
-            if not pages:
+            import fitz  # PyMuPDF
+            doc = fitz.open(input_path)
+            if len(doc) == 0:
                 raise ValueError("Could not extract any pages from the PDF.")
+            page = doc[0]
+            # Render at 300 DPI (default is 72, so zoom = 300/72 ≈ 4.17)
+            zoom = 300 / 72
+            mat = fitz.Matrix(zoom, zoom)
+            pix = page.get_pixmap(matrix=mat)
             pdf_img_path = os.path.join(TEMP_DIR, f"pdf_page_{os.path.basename(input_path)}.png")
-            pages[0].save(pdf_img_path, 'PNG')
+            pix.save(pdf_img_path)
+            doc.close()
             print(f"PDF converted to image: {pdf_img_path}")
             from omr_engine import image_to_musicxml
             converted_path = image_to_musicxml(pdf_img_path, TEMP_DIR)

@@ -10,4 +10,5 @@ mido
 midi2audio
 pydub  
 pdf2image
+PyMuPDF
  
