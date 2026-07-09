@@ -840,7 +840,7 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
                         new_errors = []
                     else:
                         prev_voicing, prev_chord = state_data[i - 1][prev_key]
-                        tc, new_errors = transition_cost(prev_voicing, prev_chord, voicing, chord_info, next_melody_pitch, detected_key, harmony_style, dur)
+                        tc, new_errors = transition_cost(prev_voicing, prev_chord, voicing, chord_info, next_melody_pitch, detected_key, harmony_style, dur.quarterLength)
                         tc += doubling_penalty
                     
                     total = prev_cost + tc
