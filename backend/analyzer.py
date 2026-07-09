@@ -313,6 +313,8 @@ def check_parallels(prev_v, curr_v):
                         errors.append(f"Parallel 5th: {names[i]}-{names[j]}")
                     elif curr_ivl % 12 == 0 and prev_ivl % 12 == 0 and curr_ivl > 0:
                         errors.append(f"Parallel 8ve: {names[i]}-{names[j]}")
+                    elif (curr_ivl % 12 == 7 and prev_ivl % 12 == 6) or (curr_ivl % 12 == 6 and prev_ivl % 12 == 7):
+                        errors.append(f"Unequal 5th (d5/P5): {names[i]}-{names[j]}")
                 elif (s_dir > 0 and l_dir < 0) or (s_dir < 0 and l_dir > 0):
                     if curr_ivl % 12 == 7 and prev_ivl % 12 == 7:
                         errors.append(f"Consecutive 5th (contrary): {names[i]}-{names[j]}")
