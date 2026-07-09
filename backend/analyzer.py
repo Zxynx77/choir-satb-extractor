@@ -594,17 +594,27 @@ def transition_cost(prev_voicing, prev_chord, curr_voicing, curr_chord, next_mel
         elif root_motion == 2 or root_motion == 10:
             cost -= 2  # Stepwise (often good)
         elif root_motion == 0:
-            cost -= 3  # Reward staying on the same chord to encourage stable harmonic rhythm across sub-beats
+            cost -= 10  # Strong reward for harmonic stability
     else:
         if root_motion == 5 or root_motion == 7:
             cost -= 2  # Strong progression (motion by 4th/5th)
         elif root_motion == 0:
-            cost -= 1  # Small reward for staying on the same chord
+            cost -= 8  # Reward staying on the same chord
             
-    # Heavily penalize changing chords on short notes (passing tones)
-    # A short note (eighth or less) should hold the previous chord
-    if dur <= 0.5 and root_motion != 0:
-        cost += 500
+    # === HARMONIC RHYTHM STABILITY ===
+    # In chorale/hymn style, chords should NOT change on every beat.
+    # The melody is sliced into max 1.0 quarter-note chunks, so dur-based
+    # detection alone misses quarter-note passing tones. Use a graduated system:
+    if root_motion != 0:
+        # Base penalty: ANY chord change costs something (encourages stability)
+        cost += 15
+        # Additional penalty scaled by shortness of note
+        if dur <= 0.25:    # 16th note — almost never change chord
+            cost += 1000
+        elif dur <= 0.5:   # 8th note — very rarely change chord
+            cost += 500
+        elif dur <= 1.0:   # quarter note — prefer to hold
+            cost += 50
             
     # 8. Non-Chord Tone Penalty (Contextual Passing Tone Handling)
     is_chord_tone = curr_chord.get('is_chord_tone', True)
