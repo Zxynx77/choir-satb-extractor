@@ -292,9 +292,8 @@ def generate_voicings_for_chord(chord_info, fixed_parts, ranges, scale_key=None,
                             penalty += 5
                     
                     voicings.append((voicing, chord_info, penalty))
-    
     voicings.sort(key=lambda x: x[2])
-    return voicings[:80]
+    return voicings[:400]
 
 def check_parallels(prev_v, curr_v):
     """Check for parallel 5ths and octaves between two voicings."""
@@ -314,6 +313,11 @@ def check_parallels(prev_v, curr_v):
                         errors.append(f"Parallel 5th: {names[i]}-{names[j]}")
                     elif curr_ivl % 12 == 0 and prev_ivl % 12 == 0 and curr_ivl > 0:
                         errors.append(f"Parallel 8ve: {names[i]}-{names[j]}")
+                elif (s_dir > 0 and l_dir < 0) or (s_dir < 0 and l_dir > 0):
+                    if curr_ivl % 12 == 7 and prev_ivl % 12 == 7:
+                        errors.append(f"Consecutive 5th (contrary): {names[i]}-{names[j]}")
+                    elif curr_ivl % 12 == 0 and prev_ivl % 12 == 0 and curr_ivl > 0:
+                        errors.append(f"Consecutive 8ve (contrary): {names[i]}-{names[j]}")
     return errors
 
 def decorate_chorale(parts, scale_key):
@@ -493,7 +497,7 @@ def transition_cost(prev_voicing, prev_chord, curr_voicing, curr_chord, next_mel
             soprano_step = abs(curr_voicing[0] - prev_voicing[0])
             if outer_interval in [0, 7]:  # P8 or P5
                 if soprano_step > 2:  # Soprano didn't move by step
-                    cost += 200
+                    cost += 2000
                     errors.append(f"Direct {'5th' if outer_interval == 7 else '8ve'}: Soprano-Bass")
     
     # 4. === PARTWRITER RULE: Leading tone resolves UP to tonic ===
