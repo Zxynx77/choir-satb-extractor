@@ -166,12 +166,18 @@ def generate_voicings_for_chord(chord_info, fixed_parts, ranges, scale_key=None,
                         for pc in pcs:
                             if pc != root_pc and (pc - root_pc) % 12 not in [3, 4]:
                                 fifth_pc = pc
-                        missing = pcs - voicing_pcs
-                        if missing and missing != {fifth_pc}:
+                        if fifth_pc and third_interval:
+                            if root_pc in voicing_pcs and third_interval in voicing_pcs:
+                                penalty = 8
+                                # Missing 5th is allowed with penalty
+                            elif not chord_info.get('is_chord_tone', True):
+                                penalty = 10 # Allow missing root/3rd on passing tones
+                            else:
+                                continue # Cannot omit root or 3rd
+                        else:
                             continue
-                    
-                    
-                    penalty = 0
+                    else:
+                        penalty = 0
                     
                     # Voice crossing penalties (relaxed from strict bans to soft penalties)
                     if s < a: penalty += 50
@@ -418,7 +424,7 @@ def decorate_chorale(parts, scale_key):
         
         parts[p_name] = new_part
 
-def transition_cost(prev_voicing, prev_chord, curr_voicing, curr_chord, next_melody_pitch=None, scale_key=None, harmony_style='close'):
+def transition_cost(prev_voicing, prev_chord, curr_voicing, curr_chord, next_melody_pitch=None, scale_key=None, harmony_style='close', dur=1.0):
     """
     Calculate the voice-leading cost between two voicings.
     Enforces all PartWriter rules for transitions.
@@ -603,6 +609,10 @@ def transition_cost(prev_voicing, prev_chord, curr_voicing, curr_chord, next_mel
             cost -= 2  # Strong progression (motion by 4th/5th)
         elif root_motion == 0:
             cost -= 1  # Small reward for staying on the same chord
+            
+    # Heavily penalize changing chords on short notes (passing tones)
+    if dur <= 0.5 and root_motion != 0:
+        cost += 100
             
     # 8. Non-Chord Tone Penalty (Contextual Passing Tone Handling)
     is_chord_tone = curr_chord.get('is_chord_tone', True)
@@ -830,7 +840,7 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
                         new_errors = []
                     else:
                         prev_voicing, prev_chord = state_data[i - 1][prev_key]
-                        tc, new_errors = transition_cost(prev_voicing, prev_chord, voicing, chord_info, next_melody_pitch, detected_key, harmony_style)
+                        tc, new_errors = transition_cost(prev_voicing, prev_chord, voicing, chord_info, next_melody_pitch, detected_key, harmony_style, dur)
                         tc += doubling_penalty
                     
                     total = prev_cost + tc
