@@ -294,7 +294,7 @@ def generate_voicings_for_chord(chord_info, fixed_parts, ranges, scale_key=None,
                     
                     voicings.append((voicing, chord_info, penalty))
     voicings.sort(key=lambda x: x[2])
-    return voicings[:100]
+    return voicings[:200]
 
 def check_parallels(prev_v, curr_v):
     """Check for parallel 5ths and octaves between two voicings."""
@@ -864,6 +864,64 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
     
     # Collect errors
     all_errors = list(set(dp[-1][best_final][2]))
+    
+    # ===== POST-VITERBI PARALLEL FIFTHS CLEANUP =====
+    # The Viterbi algorithm optimizes globally but can still produce parallel fifths
+    # when ALL candidate voicings had them with the chosen predecessor. This pass
+    # scans the final path and attempts to fix any remaining violations by trying
+    # alternative voicings from the candidate pool at each step.
+    for idx in range(1, len(path_keys)):
+        prev_sk = path_keys[idx - 1]
+        curr_sk = path_keys[idx]
+        
+        if prev_sk is None or prev_sk == 'rest' or curr_sk is None or curr_sk == 'rest':
+            continue
+        
+        prev_voicing = prev_sk  # state key IS the voicing tuple
+        curr_voicing = curr_sk
+        
+        parallels = check_parallels(prev_voicing, curr_voicing)
+        if not parallels:
+            continue  # No problem here
+        
+        # We have parallel fifths/octaves — try to find a substitute voicing
+        # Look at all candidate voicings that were available at this step
+        if idx < len(state_data) and state_data[idx]:
+            best_substitute = None
+            best_sub_cost = float('inf')
+            
+            for candidate_key, (cand_voicing, cand_chord) in state_data[idx].items():
+                if candidate_key == curr_sk:
+                    continue  # Skip the current (problematic) voicing
+                if cand_voicing is None:
+                    continue
+                
+                # Check if this candidate has parallel fifths with the previous voicing
+                cand_parallels = check_parallels(prev_voicing, cand_voicing)
+                if cand_parallels:
+                    continue  # This one also has parallel fifths, skip
+                
+                # Also check forward: does this substitute create parallel fifths
+                # with the NEXT voicing?
+                if idx + 1 < len(path_keys) and path_keys[idx + 1] is not None and path_keys[idx + 1] != 'rest':
+                    next_voicing = path_keys[idx + 1]
+                    fwd_parallels = check_parallels(cand_voicing, next_voicing)
+                    if fwd_parallels:
+                        continue  # Would create new parallel fifths going forward
+                
+                # Calculate cost of this substitute
+                if candidate_key in dp[idx]:
+                    sub_cost = dp[idx][candidate_key][0]
+                else:
+                    sub_cost = float('inf')
+                
+                if sub_cost < best_sub_cost:
+                    best_sub_cost = sub_cost
+                    best_substitute = candidate_key
+            
+            if best_substitute is not None:
+                path_keys[idx] = best_substitute
+                print(f"  [Cleanup] Step {idx}: Swapped voicing {curr_sk} -> {best_substitute} to fix: {parallels}")
     
     # ===== BUILD OUTPUT PARTS =====
     parts = {
