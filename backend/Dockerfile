@@ -5,6 +5,7 @@ RUN apt-get update && apt-get install -y \
     fluidsynth \
     ffmpeg \
     fluid-soundfont-gm \
+    poppler-utils \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory

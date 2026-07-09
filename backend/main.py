@@ -89,8 +89,24 @@ async def analyze_midi(
     try:
         converted_path = input_path
         
+        # If it's a PDF, convert first page to an image, then run OMR
+        if ext in SUPPORTED_DOC_FORMATS:
+            from pdf2image import convert_from_path
+            pages = convert_from_path(input_path, dpi=300, first_page=1, last_page=1)
+            if not pages:
+                raise ValueError("Could not extract any pages from the PDF.")
+            pdf_img_path = os.path.join(TEMP_DIR, f"pdf_page_{os.path.basename(input_path)}.png")
+            pages[0].save(pdf_img_path, 'PNG')
+            print(f"PDF converted to image: {pdf_img_path}")
+            from omr_engine import image_to_musicxml
+            converted_path = image_to_musicxml(pdf_img_path, TEMP_DIR)
+            print(f"OMR converted PDF image to: {converted_path}")
+            # Clean up the intermediate PNG
+            if os.path.exists(pdf_img_path):
+                os.remove(pdf_img_path)
+        
         # If it's an image, run OMR to convert to MusicXML first
-        if ext in SUPPORTED_IMAGE_FORMATS:
+        elif ext in SUPPORTED_IMAGE_FORMATS:
             from omr_engine import image_to_musicxml
             converted_path = image_to_musicxml(input_path, TEMP_DIR)
             print(f"OMR converted image to: {converted_path}")
@@ -108,7 +124,7 @@ async def analyze_midi(
             "key": result.get("key", "Unknown"),
             "tempo": result.get("tempo"),
             "audio_error": result.get("audio_error", "None"),
-            "input_type": "image_omr" if ext in SUPPORTED_IMAGE_FORMATS else "direct"
+            "input_type": "pdf_omr" if ext in SUPPORTED_DOC_FORMATS else "image_omr" if ext in SUPPORTED_IMAGE_FORMATS else "direct"
         })
     except ImportError as e:
         return JSONResponse(
