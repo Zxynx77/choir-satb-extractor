@@ -209,9 +209,11 @@ def generate_voicings_for_chord(chord_info, fixed_parts, ranges, scale_key=None,
                                 penalty -= 3  # Good: double bass in 6/4
                     
                     # === Voice separation penalties ===
+                    # PROFESSIONAL STANDARD: Top 3 voices (SAT) stay within 1 octave of each other
                     sa_gap = s - a
                     at_gap = a - t
                     tb_gap = t - b
+                    sat_span = s - t  # Total span of top 3 voices
                         
                     if sa_gap == 0: penalty += 25  # Strongly forbid Soprano-Alto unison
                     if at_gap == 0: penalty += 30  # Strictly forbid Alto-Tenor unison
@@ -225,11 +227,36 @@ def generate_voicings_for_chord(chord_info, fixed_parts, ranges, scale_key=None,
                     if 3 <= at_gap <= 9:
                         penalty -= 4
                     
+                    # === PROFESSIONAL STANDARD: SAT within 1 octave ===
+                    if sat_span <= 12:  # SAT span within octave = professional
+                        penalty -= 8  # Strong reward
+                    elif sat_span <= 16:  # Slightly wide but acceptable
+                        penalty += 5
+                    elif sat_span <= 19:  # Too wide
+                        penalty += 20
+                    else:  # Chaotically wide
+                        penalty += 50
+                    
+                    # === S-A and A-T individual gap limits ===
+                    if sa_gap > 12:  # S-A wider than octave
+                        penalty += 30
+                    elif sa_gap > 8:
+                        penalty += 10
+                    elif 3 <= sa_gap <= 7:  # Sweet spot
+                        penalty -= 3
+                    
+                    if at_gap > 12:  # A-T wider than octave
+                        penalty += 30
+                    elif at_gap > 8:
+                        penalty += 10
+                    elif 3 <= at_gap <= 7:  # Sweet spot
+                        penalty -= 3
+                    
                     # === TRADITIONAL STYLE: Heavy Major Triad Bias ===
                     if harmony_style in ['traditional', 'strict']:
                         q = chord_info.get('quality', 'other')
                         if q == 'minor':
-                            penalty += 3  # Minor chords are natural in hymns (ii, iii, vi)
+                            penalty += 3
                         elif q == 'diminished':
                             penalty += 25
                         elif q == 'other':
@@ -239,44 +266,36 @@ def generate_voicings_for_chord(chord_info, fixed_parts, ranges, scale_key=None,
                     total_span = s - b
                     
                     # === UNIVERSAL: Bass must stay in bass clef (ALL styles) ===
-                    if b < 43:  # Below G2 (too many ledger lines)
+                    if b < 43:  # Below G2
                         penalty += 10
                     elif 43 <= b <= 55:  # Sweet spot G2-G3
                         penalty -= 3
-                    elif b <= 57:  # A3 — top of bass staff, acceptable
+                    elif b <= 57:  # A3
                         penalty += 5
-                    elif b <= 60:  # Up to C4 — entering treble territory
+                    elif b <= 60:  # Up to C4
                         penalty += 50
-                    else:  # Above C4 — bass in treble clef is WRONG
+                    else:  # Above C4
                         penalty += 200
                     
-                    # === UNIVERSAL: Alto tessitura (ALL styles) ===
-                    # Alto sweet spot: A3-E5 (MIDI 57-76)
-                    if a < 57:  # Below A3
+                    # === UNIVERSAL: Alto tessitura ===
+                    if a < 57:
                         penalty += 10
-                    elif 57 <= a <= 76:  # Sweet spot A3-E5
+                    elif 57 <= a <= 76:
                         penalty -= 3
                     elif a > 76:
                         penalty += 2
                     
-                    # === UNIVERSAL: Tenor tessitura (ALL styles) ===
-                    # Tenor sweet spot: E3-G4 (MIDI 52-67)
-                    if t < 52:  # Below E3 (too muddy)
+                    # === UNIVERSAL: Tenor tessitura ===
+                    if t < 52:
                         penalty += 10
-                    elif 52 <= t <= 67:  # Sweet spot E3-G4
+                    elif 52 <= t <= 67:
                         penalty -= 2
-                    else:  # Above G4: too high for Tenor
+                    else:
                         penalty += 5
-                    
-                    # === UNIVERSAL: Alto-Soprano Proximity ===
-                    if 3 <= sa_gap <= 12:  # Allow up to an octave of space
-                        penalty -= 3
-                    elif sa_gap > 16:
-                        penalty += 5  # Alto is too far from Soprano
                     
                     # === UNIVERSAL: Avoid Tenor doubling the Bass ===
                     if t % 12 == b % 12 and t != b:
-                        penalty += 8  # Tenor should be independent
+                        penalty += 8
                     
                     # Harmony style spread preference
                     if harmony_style == 'close':
@@ -425,34 +444,39 @@ def transition_cost(prev_voicing, prev_chord, curr_voicing, curr_chord, next_mel
     names = ['Soprano', 'Alto', 'Tenor', 'Bass']
     
     # 1. Stepwise motion preference — graduated penalties for ALL voices
+    # PROFESSIONAL STANDARD: Inner parts should move by single steps (smooth)
     for i in range(4):  # Soprano, Alto, Tenor, Bass
         leap = abs(curr_voicing[i] - prev_voicing[i])
         
-        if i in [1, 2]:  # Alto & Tenor: allow leaps to reach correct tessitura
-            if leap <= 2:
-                cost -= 1  # Reward stepwise motion
+        if i in [1, 2]:  # Alto & Tenor: MUST move smoothly (stepwise strongly preferred)
+            if leap == 0:
+                cost -= 4  # Holding the same note is excellent
+            elif leap <= 2:
+                cost -= 6  # Stepwise motion is the gold standard
             elif leap <= 4:
-                cost += 2  # Minor 3rd / Major 3rd: very mild
+                cost += 8  # Minor/Major 3rd: noticeable, penalize
             elif leap <= 5:
-                cost += 6  # Perfect 4th: acceptable leap for register correction
+                cost += 20  # Perfect 4th: significant penalty
             elif leap <= 7:
-                cost += 12  # 5th: moderate penalty, but allowed when needed
+                cost += 45  # 5th: heavy penalty
             elif leap <= 12:
-                cost += 40  # Up to an octave: heavy but not forbidden
+                cost += 100  # Up to an octave: very heavy
             else:
-                cost += 200  # Larger than octave: effectively forbidden
-        elif i == 3:  # Bass: more freedom, but not unlimited
-            if leap <= 2:
-                cost -= 1  # Reward stepwise bass
+                cost += 500  # Larger than octave: effectively forbidden
+        elif i == 3:  # Bass: more freedom for root motion leaps
+            if leap == 0:
+                cost -= 3  # Holding bass note is good
+            elif leap <= 2:
+                cost -= 2  # Reward stepwise bass
             elif leap in [5, 7]:  # P4 or P5 leap in bass
                 cost -= 3  # Reward strong root motion leaps
             elif leap <= 7:
-                cost += 2  # Other leaps up to a 5th: small penalty
+                cost += 4  # Other leaps up to a 5th: mild penalty
             elif leap <= 12:
-                cost += 8  # Up to an octave: moderate
+                cost += 15  # Up to an octave: moderate
             else:
-                cost += 80  # Larger than octave: heavy penalty
-        else:  # Soprano (i == 0)
+                cost += 100  # Larger than octave: heavy penalty
+        else:  # Soprano (i == 0) — fixed melody, just track cost
             if leap <= 2:
                 cost -= 1
             elif leap <= 4:
@@ -547,18 +571,31 @@ def transition_cost(prev_voicing, prev_chord, curr_voicing, curr_chord, next_mel
         else: gen_dirs.append(0)
         
     # Penalize block-chord writing (all 3 generated voices moving same direction)
-    if all(d == 1 for d in gen_dirs if d != 0) and sum(1 for d in gen_dirs if d != 0) >= 3:
-        cost += 8
+    # PROFESSIONAL STANDARD: Parts should NOT all jump together in vertical blocks
+    moving_count = sum(1 for d in gen_dirs if d != 0)
+    if moving_count >= 2:
+        same_dir_count = 0
+        for d in gen_dirs:
+            if d != 0:
+                if d == gen_dirs[0] or gen_dirs[0] == 0:
+                    same_dir_count += 1
+        if same_dir_count >= moving_count and moving_count >= 2:
+            cost += 25  # Heavy penalty for block-chord motion
+    if moving_count >= 3:
+        if all(d == 1 for d in gen_dirs if d != 0) or all(d == -1 for d in gen_dirs if d != 0):
+            cost += 40  # ALL voices moving same direction = very bad
         
-    # Reward contrary motion between Soprano (fixed) and Bass (generated)
+    # PROFESSIONAL STANDARD: Bass should move OPPOSITE to the melody (contrary motion)
     s_motion = curr_voicing[0] - prev_voicing[0]
     b_motion = curr_voicing[3] - prev_voicing[3]
     if s_motion != 0 and b_motion != 0:
         if (s_motion > 0 and b_motion < 0) or (s_motion < 0 and b_motion > 0):
-            cost -= 3  # Reward contrary motion
+            cost -= 12  # Strong reward for contrary motion (professional standard)
+        elif (s_motion > 0 and b_motion > 0) or (s_motion < 0 and b_motion < 0):
+            cost += 15  # Penalty: bass mirroring melody is amateur
     
     # 6.6 === ALTO-TENOR INDEPENDENCE ===
-    # This is the key rule that prevents Alto and Tenor from being "the same melody shifted down"
+    # PROFESSIONAL STANDARD: Inner parts should be independent, not move in lockstep
     a_motion = curr_voicing[1] - prev_voicing[1]  # Alto movement
     t_motion = curr_voicing[2] - prev_voicing[2]  # Tenor movement
     
@@ -569,18 +606,18 @@ def transition_cost(prev_voicing, prev_chord, curr_voicing, curr_chord, next_mel
         if same_dir:
             # Moving same direction by same interval = strict parallel (sounds identical)
             if abs(a_motion) == abs(t_motion):
-                cost += 20  # Heavy penalty for strict parallel motion
+                cost += 35  # Heavy penalty for strict parallel motion
             # Moving same direction by similar interval = similar motion (still too similar)
             elif abs(abs(a_motion) - abs(t_motion)) <= 1:
-                cost += 10  # Moderate penalty
+                cost += 18  # Moderate penalty
             else:
-                cost += 3   # Mild penalty for same direction but different intervals
+                cost += 6   # Mild penalty for same direction but different intervals
         else:
             # Contrary motion between Alto and Tenor = independent voices!
-            cost -= 5  # Strong reward
+            cost -= 8  # Strong reward
     elif (a_motion != 0) != (t_motion != 0):
         # One moves while the other stays = oblique motion (good independence)
-        cost -= 3
+        cost -= 6
     
     # 7. Root motion preferences (favor functional progressions in traditional style)
     root_motion = abs(curr_chord['root_pc'] - prev_chord['root_pc'])
