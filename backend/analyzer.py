@@ -103,6 +103,21 @@ def generate_candidate_chords(melody_pitch, scale_key):
             'degree': degree_idx, # 0=I, 1=II, etc.
             'is_chord_tone': is_chord_tone
         })
+        
+        # === V7 DOMINANT CHORD ===
+        # For the dominant (V), also generate a dominant 7th chord
+        # V7 is extremely common in hymns and has specific resolution rules
+        if degree_idx == 4 and quality == 'major':  # V chord
+            seventh_pc = scale_pcs[(degree_idx + 6) % 7]  # 7th above root
+            v7_pcs = {root_pc, third_pc, fifth_pc, seventh_pc}
+            candidates.append({
+                'root_pc': root_pc,
+                'quality': 'dominant7',
+                'pcs': v7_pcs,
+                'degree': degree_idx,
+                'is_chord_tone': melody_pitch.pitchClass in v7_pcs,
+                'seventh_pc': seventh_pc  # Track the 7th for resolution rules
+            })
     
     return candidates
 
@@ -160,17 +175,20 @@ def generate_voicings_for_chord(chord_info, fixed_parts, ranges, scale_key=None,
                     voicing_pcs = set(p % 12 for p in voicing)
                     pc_list = [p % 12 for p in voicing]
                     
-                    # Must cover all 3 pitch classes of the triad
+                    # Must cover essential pitch classes of the chord
                     if not pcs.issubset(voicing_pcs):
+                        # Find the 5th of the chord (perfect or diminished)
                         fifth_pc = None
                         for pc in pcs:
-                            if pc != root_pc and (pc - root_pc) % 12 not in [3, 4]:
+                            ivl = (pc - root_pc) % 12
+                            if ivl in [6, 7]:  # Diminished 5th or Perfect 5th
                                 fifth_pc = pc
                         missing = pcs - voicing_pcs
-                        if missing and missing == {fifth_pc}:
-                            penalty = 8  # Missing 5th is allowed with penalty
+                        # Allow omitting just the 5th (standard for both triads and 7th chords)
+                        if missing and fifth_pc is not None and missing == {fifth_pc}:
+                            penalty = 4 if chord_info.get('quality') == 'dominant7' else 8
                         else:
-                            continue  # Cannot omit root or 3rd
+                            continue  # Cannot omit root, 3rd, or 7th
                     else:
                         penalty = 0
                     
@@ -207,6 +225,17 @@ def generate_voicings_for_chord(chord_info, fixed_parts, ranges, scale_key=None,
                             # This is 2nd inversion — reward doubling the 5th (bass note)
                             if pc_list.count(fifth_pc_check) >= 2:
                                 penalty -= 3  # Good: double bass in 6/4
+                    
+                    # === PROFESSIONAL: Bass root-position preference ===
+                    # Root position is the default in professional chorale writing.
+                    # Inversions should only be used deliberately for smooth bass lines.
+                    if b % 12 == root_pc:
+                        penalty -= 10  # Strong reward: root in bass = stable, correct-sounding
+                    elif third_interval is not None and b % 12 == third_interval:
+                        penalty += 5   # 1st inversion: acceptable but not default
+                    else:
+                        # 5th in bass (2nd inversion): very restricted in traditional writing
+                        penalty += 15
                     
                     # === Voice separation penalties ===
                     # PROFESSIONAL STANDARD: Top 3 voices (SAT) stay within 1 octave of each other
@@ -538,20 +567,19 @@ def transition_cost(prev_voicing, prev_chord, curr_voicing, curr_chord, next_mel
                     errors.append(f"{names[i]}: Leading tone did not resolve up")
     
     # 5. === PARTWRITER RULE: Common tone retention ===
-    # If two chords share a pitch class, at least one voice should keep it
+    # PROFESSIONAL STANDARD: When chords share notes, voices should HOLD them
     prev_pcs = set(v % 12 for v in prev_voicing)
     curr_pcs = set(v % 12 for v in curr_voicing)
     common_pcs = prev_pcs & curr_pcs
     if common_pcs:
-        retained = False
+        retained_count = 0
         for i in range(4):
             if prev_voicing[i] == curr_voicing[i] and prev_voicing[i] % 12 in common_pcs:
-                retained = True
-                break
-        if retained:
-            cost -= 2  # Reward common tone retention
+                retained_count += 1
+        if retained_count > 0:
+            cost -= 5 * retained_count  # Reward EACH retained common tone
         else:
-            cost += 3  # Penalty for not retaining common tones
+            cost += 10  # Significant penalty for not retaining any common tones
     
     # 6. === PARTWRITER RULE: Avoid augmented 2nds ===
     for i in range(4):
@@ -688,9 +716,49 @@ def transition_cost(prev_voicing, prev_chord, curr_voicing, curr_chord, next_mel
             # so the AI prefers to just change the chord to match it.
             cost += 100
     
-    # 8. Contrary motion bonus (soprano vs bass)
-    if (s_dir > 0 and b_dir < 0) or (s_dir < 0 and b_dir > 0):
-        cost -= 1  # Reward contrary motion
+    # 9. === V7 RESOLUTION: Chordal 7th resolves DOWN by step ===
+    if prev_chord.get('quality') == 'dominant7':
+        seventh_pc = prev_chord.get('seventh_pc')
+        if seventh_pc is not None:
+            for i in range(4):
+                if prev_voicing[i] % 12 == seventh_pc:
+                    # This voice had the 7th — it should resolve DOWN by step
+                    move = prev_voicing[i] - curr_voicing[i]
+                    if 1 <= move <= 2:  # Moved down by 1-2 semitones
+                        cost -= 5  # Reward proper 7th resolution
+                    elif curr_voicing[i] != prev_voicing[i]:  # Moved but not down by step
+                        cost += 20
+                        errors.append(f"{names[i]}: 7th did not resolve down")
+    
+    # 10. === BASS INVERSION AWARENESS ===
+    # Reward 1st inversion when it creates a smooth (stepwise) bass line
+    # Penalize leaping into an inversion (should use root position for leaps)
+    bass_leap = abs(curr_voicing[3] - prev_voicing[3])
+    curr_bass_pc = curr_voicing[3] % 12
+    curr_root_pc = curr_chord['root_pc']
+    if curr_bass_pc != curr_root_pc:
+        # Bass is NOT on the root (it's an inversion)
+        if bass_leap <= 2:
+            cost -= 5  # Stepwise motion into inversion = GOOD (smooth bass line)
+        else:
+            cost += 10  # Leaping into an inversion is poor voice leading
+    
+    # 11. === NEAREST CHORD TONE ===
+    # Penalize inner voices that skip past a closer available chord tone
+    curr_chord_pcs = curr_chord['pcs']
+    for i in [1, 2, 3]:  # Alto, Tenor, Bass
+        if curr_voicing[i] != prev_voicing[i]:  # Voice moved
+            prev_p = prev_voicing[i]
+            actual_move = abs(curr_voicing[i] - prev_voicing[i])
+            # Find the distance to the nearest chord tone from the previous position
+            best_dist = 99
+            for ct_pc in curr_chord_pcs:
+                dist_up = (ct_pc - prev_p % 12) % 12
+                dist_down = (prev_p % 12 - ct_pc) % 12
+                best_dist = min(best_dist, dist_up, dist_down)
+            # If voice jumped past a closer chord tone, penalize
+            if best_dist > 0 and actual_move > best_dist + 3:
+                cost += 8  # Skipped past a closer chord tone
     
     return cost, errors
 
