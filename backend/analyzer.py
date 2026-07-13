@@ -83,6 +83,13 @@ def generate_candidate_chords(melody_pitch, scale_key):
         chord_pcs = {root_pc, third_pc, fifth_pc}
         is_chord_tone = (melody_pitch.pitchClass in chord_pcs)
         
+        # Harmonic minor fix: raise the 3rd of V chord in minor keys
+        # so that the dominant contains the leading tone (e.g., E-G#-B in A minor)
+        if mode == 'minor' and degree_idx == 4:
+            third_pc = (root_pc + 4) % 12  # Major 3rd above root
+            chord_pcs = {root_pc, third_pc, fifth_pc}
+            is_chord_tone = (melody_pitch.pitchClass in chord_pcs)
+        
         # Determine chord quality for cost purposes
         third_interval = (third_pc - root_pc) % 12
         fifth_interval = (fifth_pc - root_pc) % 12
@@ -207,6 +214,20 @@ def generate_voicings_for_chord(chord_info, fixed_parts, ranges, scale_key=None,
                             # This is 2nd inversion — reward doubling the 5th (bass note)
                             if pc_list.count(fifth_pc_check) >= 2:
                                 penalty -= 3  # Good: double bass in 6/4
+                    
+                    # === Bass root-position preference ===
+                    # PROFESSIONAL STANDARD: Root in bass is the default (~80% in Bach).
+                    # 1st inversion is acceptable for smooth bass lines, 2nd inversion is rare.
+                    bass_pc = b % 12
+                    if bass_pc == root_pc:
+                        penalty -= 8   # Root in bass = most stable
+                    else:
+                        # Check if bass has the 3rd (1st inversion)
+                        third_ivl = (third_pc - root_pc) % 12
+                        if third_ivl in [3, 4] and bass_pc == third_pc:
+                            penalty += 5   # 1st inversion = acceptable but weaker
+                        else:
+                            penalty += 12  # 2nd inversion = very restricted
                     
                     # === Voice separation penalties ===
                     # PROFESSIONAL STANDARD: Top 3 voices (SAT) stay within 1 octave of each other
@@ -549,9 +570,9 @@ def transition_cost(prev_voicing, prev_chord, curr_voicing, curr_chord, next_mel
                 retained = True
                 break
         if retained:
-            cost -= 2  # Reward common tone retention
+            cost -= 6  # Strong reward for common tone retention (primary partwriting rule)
         else:
-            cost += 3  # Penalty for not retaining common tones
+            cost += 8  # Significant penalty for abandoning available common tones
     
     # 6. === PARTWRITER RULE: Avoid augmented 2nds ===
     for i in range(4):
@@ -688,9 +709,7 @@ def transition_cost(prev_voicing, prev_chord, curr_voicing, curr_chord, next_mel
             # so the AI prefers to just change the chord to match it.
             cost += 100
     
-    # 8. Contrary motion bonus (soprano vs bass)
-    if (s_dir > 0 and b_dir < 0) or (s_dir < 0 and b_dir > 0):
-        cost -= 1  # Reward contrary motion
+    # (Duplicate contrary motion bonus removed — already handled at L588-595 with -12/+15)
     
     return cost, errors
 
@@ -896,9 +915,25 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
         state_data.append(current_data)
     
     # ===== BACKTRACK =====
-    # Find best final state
+    # Find best final state — with cadence bias for tonic chord in root position
     final_states = dp[-1]
-    best_final = min(final_states.keys(), key=lambda k: final_states[k][0])
+    tonic_pc = detected_key.tonic.pitchClass if detected_key else None
+    def final_state_score(k):
+        base_cost = final_states[k][0]
+        if k == 'rest' or tonic_pc is None:
+            return base_cost
+        voicing, chord_info = state_data[-1].get(k, (None, None))
+        if voicing is None or chord_info is None:
+            return base_cost
+        cadence_bonus = 0
+        # Reward tonic chord at the end (authentic cadence feel)
+        if chord_info.get('root_pc') == tonic_pc:
+            cadence_bonus -= 15
+        # Reward root position at the end (root in bass)
+        if voicing[3] % 12 == chord_info.get('root_pc', -1):
+            cadence_bonus -= 10
+        return base_cost + cadence_bonus
+    best_final = min(final_states.keys(), key=final_state_score)
     
     # Build path from end to start
     path_keys = [None] * len(melody_events)
@@ -1033,7 +1068,15 @@ def process_midi(input_path, ranges_str, output_dir, harmony_style='close', temp
                 n = note.Note(note_pitch, duration=dur)
                 n.volume.velocity = 70  # Lower velocity to prevent WebAudio compressor clipping
                 parts[part_name].append(n)
-                
+    
+    # === ACTIVATE CHORALE DECORATION ===
+    # Post-process: add bass passing tones and Alto/Tenor cadential suspensions.
+    # This creates rhythmic independence between voices (prevents "clone" problem).
+    if harmony_style != 'strict':
+        try:
+            decorate_chorale(parts, detected_key)
+        except Exception as e:
+            logging.warning(f"decorate_chorale failed (non-fatal): {e}")
 
         
     # ===== RHYTHM RESTORATION (LEGATO PASS) =====
