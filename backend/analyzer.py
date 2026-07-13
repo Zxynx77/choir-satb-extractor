@@ -608,10 +608,10 @@ def transition_cost(prev_voicing, prev_chord, curr_voicing, curr_chord, next_mel
                 if d == gen_dirs[0] or gen_dirs[0] == 0:
                     same_dir_count += 1
         if same_dir_count >= moving_count and moving_count >= 2:
-            cost += 25  # Heavy penalty for block-chord motion
+            cost += 45  # Heavy penalty for block-chord motion
     if moving_count >= 3:
         if all(d == 1 for d in gen_dirs if d != 0) or all(d == -1 for d in gen_dirs if d != 0):
-            cost += 40  # ALL voices moving same direction = very bad
+            cost += 70  # ALL voices moving same direction = very bad
         
     # PROFESSIONAL STANDARD: Bass should move OPPOSITE to the melody (contrary motion)
     s_motion = curr_voicing[0] - prev_voicing[0]
@@ -634,18 +634,18 @@ def transition_cost(prev_voicing, prev_chord, curr_voicing, curr_chord, next_mel
         if same_dir:
             # Moving same direction by same interval = strict parallel (sounds identical)
             if abs(a_motion) == abs(t_motion):
-                cost += 35  # Heavy penalty for strict parallel motion
+                cost += 80  # Massive penalty for strict parallel motion
             # Moving same direction by similar interval = similar motion (still too similar)
             elif abs(abs(a_motion) - abs(t_motion)) <= 1:
-                cost += 18  # Moderate penalty
+                cost += 40  # Strong penalty
             else:
-                cost += 6   # Mild penalty for same direction but different intervals
+                cost += 15  # Moderate penalty for same direction but different intervals
         else:
             # Contrary motion between Alto and Tenor = independent voices!
-            cost -= 8  # Strong reward
+            cost -= 15  # Strong reward
     elif (a_motion != 0) != (t_motion != 0):
         # One moves while the other stays = oblique motion (good independence)
-        cost -= 6
+        cost -= 12
     
     # 7. Root motion preferences (favor functional progressions in traditional style)
     root_motion = abs(curr_chord['root_pc'] - prev_chord['root_pc'])
