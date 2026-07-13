@@ -647,6 +647,48 @@ def transition_cost(prev_voicing, prev_chord, curr_voicing, curr_chord, next_mel
         # One moves while the other stays = oblique motion (good independence)
         cost -= 12
     
+    # 6.7 === VOICE HOLD SYSTEM ===
+    # STRUCTURAL FIX: When harmony is static, inner voices should HOLD, not re-pick.
+    # This prevents Alto and Tenor from being "clones" — if the chord hasn't changed,
+    # there's NO reason for inner voices to move. Moving = unnecessary = penalized.
+    
+    # Calculate root motion early (needed here)
+    root_motion_check = abs(curr_chord['root_pc'] - prev_chord['root_pc'])
+    root_motion_check = min(root_motion_check, 12 - root_motion_check)
+    
+    if root_motion_check == 0:
+        # === SAME CHORD: voices should HOLD by default ===
+        for i in [1, 2, 3]:  # Alto, Tenor, Bass
+            if curr_voicing[i] == prev_voicing[i]:
+                cost -= 20  # Massive reward for holding when chord is same
+            else:
+                cost += 18  # Strong penalty for moving without harmonic reason
+    else:
+        # === CHORD CHANGED: stagger the movement ===
+        # Find common tones between old and new chord
+        prev_chord_pcs = prev_chord['pcs']
+        curr_chord_pcs_set = curr_chord['pcs']
+        shared_pcs = prev_chord_pcs & curr_chord_pcs_set
+        
+        if shared_pcs:
+            # There are shared notes — at least one inner voice should hold one
+            a_holds_common = (a_motion == 0 and prev_voicing[1] % 12 in shared_pcs)
+            t_holds_common = (t_motion == 0 and prev_voicing[2] % 12 in shared_pcs)
+            
+            if a_holds_common and not t_holds_common:
+                cost -= 18  # Alto holds common tone, Tenor moves = perfect stagger
+            elif t_holds_common and not a_holds_common:
+                cost -= 18  # Tenor holds common tone, Alto moves = perfect stagger
+            elif a_holds_common and t_holds_common:
+                cost -= 10  # Both hold common tones = stable but less interesting
+            else:
+                # Neither holds a common tone — both moved unnecessarily
+                cost += 12
+        
+        # Even without common tones, stagger is better than block
+        if (a_motion == 0) != (t_motion == 0):
+            cost -= 8  # One holds, one moves = staggered movement
+    
     # 7. Root motion preferences (favor functional progressions in traditional style)
     root_motion = abs(curr_chord['root_pc'] - prev_chord['root_pc'])
     root_motion = min(root_motion, 12 - root_motion)
