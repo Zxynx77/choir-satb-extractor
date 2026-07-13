@@ -222,9 +222,9 @@ def generate_voicings_for_chord(chord_info, fixed_parts, ranges, scale_key=None,
                     if bass_pc == root_pc:
                         penalty -= 8   # Root in bass = most stable
                     else:
-                        # Check if bass has the 3rd (1st inversion)
-                        third_ivl = (third_pc - root_pc) % 12
-                        if third_ivl in [3, 4] and bass_pc == third_pc:
+                        # Check if bass has the 3rd (1st inversion) using interval from root
+                        bass_ivl = (bass_pc - root_pc) % 12
+                        if bass_ivl in [3, 4]:  # minor or major 3rd above root
                             penalty += 5   # 1st inversion = acceptable but weaker
                         else:
                             penalty += 12  # 2nd inversion = very restricted
